@@ -25,7 +25,7 @@ g = 9.81
 #     0,1,2, 3 ,  4  , 5 ,  6  ,  7 
 #     8,9,10,11, 12  , 13, 14  , 15
 
-q0 = np.array([0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0])
+q0 = np.array([0,0,2.0,0,0,0,0,0,0,0,0,0,0,0,0,0])
 
 s = lambda angle: np.sin(angle)
 c = lambda angle: np.cos(angle)
@@ -90,11 +90,36 @@ G_q = lambda q: np.array([[0],
                           [m*l*g*s(q[6])],
                           [0]])
 
-b_q = lambda q:np.array([[s(alpha)*s(psi)+c(phi)*c(psi)*s(theta),0,0,0],
-                         [c(phi)*s(theta)*s(psi)-c(psi)*s(phi),0,0,0],
-                         [c(theta)*c(phi),0,0,0],
+b_q = lambda q:np.array([[s(q[6])*s(q[3])+c(q[5])*c(q[3])*s(q[4]),0,0,0],
+                         [c(q[5])*s(q[4])*s(q[3])-c(q[3])*s(q[5]),0,0,0],
+                         [c(q[4])*c(q[5]),0,0,0],
                          [0,1,0,0],
                          [0,0,1,0],
                          [0,0,0,1],
                          [0,0,0,0],
                          [0,0,0,0]])
+
+U = np.array([[.1],
+              [.0001],
+              [.0001],
+              [0]])
+
+q = q0.copy()
+
+dt = .001
+time = np.linspace(0,10,int(10/dt)+1)
+steps = 5000
+z = np.zeros((steps,16))
+qd = q0[8:].copy().reshape(8,1)
+qn = q0[:8].copy().reshape(8,1)
+
+for i in trange(steps):
+    qdd = np.linalg.inv(M_q(q.squeeze()))@(b_q(q.squeeze())@U - C_q(q.squeeze())@q[8:].reshape(8,1)-G_q(q.squeeze()))
+    qd += 0.5*dt*(qdd+q[8:].reshape(8,1))
+    qn += 0.5*dt*(qd+q[:8].reshape(8,1))
+    q = np.concatenate((qn,qd))
+    z[i] = q.T
+
+for i in range(8):
+    plt.plot(z[:,i])
+    plt.show()
