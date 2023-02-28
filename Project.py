@@ -26,7 +26,8 @@ g = 9.81
 #     0,1,2, 3 ,  4  , 5 ,  6  ,  7 
 #     8,9,10,11, 12  , 13, 14  , 15
 
-q0 = np.array([0,0,2.0,0,0,0,0.2,0.2,0,0,0,0,0,0,0,.2])
+#              x,y,z  ,s,t,f,a,b,x,y,z,s,t,f,a   ,b
+q0 = np.array([0,0,2.0,0,0,0,np.pi/4,0,0,0,0,0,0,0,0,.1])
 
 s = lambda angle: np.sin(angle)
 c = lambda angle: np.cos(angle)
@@ -100,21 +101,23 @@ b_q = lambda q:np.array([[s(q[6])*s(q[3])+c(q[5])*c(q[3])*s(q[4]),0,0,0],
                          [0,0,0,0],
                          [0,0,0,0]])
 
-U = np.array([[9.59],
+U = np.array([[9.81],
               [0],
               [0],
               [0]])
 
 q = q0.copy()
 
-def evolve(inq,innt):
-    inU = U
+def evolve(inq,innt,inU=U,noise=0):
+    if noise != 0:
+        
     temp = np.zeros(16)
     temp[:8] = inq[8:]
     temp[8:]=(np.linalg.inv(M_q(inq.squeeze()))@(b_q(inq.squeeze())@inU - C_q(inq.squeeze())@inq[8:].reshape(8,1)-G_q(inq.squeeze()))).squeeze()
     return temp
 
-y = scipy.integrate.odeint(evolve,q0,np.linspace(0,4,10000))
+t = np.linspace(0,4,10000)
+y = scipy.integrate.odeint(evolve,q0,t,args=(U,t))
 
 # dt = .001
 # time = np.linspace(0,10,int(10/dt)+1)
@@ -139,6 +142,10 @@ ax = fig.add_subplot(projection='3d')
 ax.plot(y[:,0],y[:,1],y[:,2])
 
 # histdd = np.array(histdd).squeeze()
+
+fig = plt.figure()
+plt.grid()
+plt.plot(y[:,0])
 
 fig = plt.figure()
 plt.grid()
