@@ -10,6 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sympy as sp
 from tqdm import *
+import scipy
 
 M = .5
 m = .1
@@ -25,7 +26,7 @@ g = 9.81
 #     0,1,2, 3 ,  4  , 5 ,  6  ,  7 
 #     8,9,10,11, 12  , 13, 14  , 15
 
-q0 = np.array([0,0,2.0,0,0,0.1,0,0,0,0,0,0,0,0,0,0])
+q0 = np.array([0,0,2.0,0,0,0.02,.02,0,0,0,0,0,0,0,0,0])
 
 s = lambda angle: np.sin(angle)
 c = lambda angle: np.cos(angle)
@@ -99,36 +100,43 @@ b_q = lambda q:np.array([[s(q[6])*s(q[3])+c(q[5])*c(q[3])*s(q[4]),0,0,0],
                          [0,0,0,0],
                          [0,0,0,0]])
 
-U = np.array([[7],
+U = np.array([[5],
               [0],
               [0],
               [0]])
 
 q = q0.copy()
 
+# def evolve(inq,innt,inU):
+#     print(inq.shape)
+#     return (np.linalg.inv(M_q(inq.squeeze()))@(b_q(inq.squeeze())@inU - C_q(inq.squeeze())@inq[8:].reshape(8,1)-G_q(inq.squeeze()))).squeeze()
+
+# t,y = scipy.integrate.odeint(evolve,q0,np.linspace(0,4,1000),args=U)
+
 dt = .001
 time = np.linspace(0,10,int(10/dt)+1)
-steps = 3000
+steps = 4000
 z = np.zeros((steps,16))
 qd = q0[8:].copy().reshape(8,1)
 qn = q0[:8].copy().reshape(8,1)
-hist = []
+histdd = []
+
 for i in trange(steps):
     if i==2500:
         U[0,0] = 0
     qdd = np.linalg.inv(M_q(q.squeeze()))@(b_q(q.squeeze())@U - C_q(q.squeeze())@q[8:].reshape(8,1)-G_q(q.squeeze()))
-    hist.append(qdd)
+    histdd.append(qdd)
     qd += 0.5*dt*(qdd+q[8:].reshape(8,1))
-    
     qn += 0.5*dt*(qd+q[:8].reshape(8,1))
     q = np.concatenate((qn,qd))
-    z[i] = q.T
+    z[i] = q.T.copy()
 
 fig = plt.figure()
 ax = fig.add_subplot(projection='3d')
 ax.plot(z[:,0],z[:,1],z[:,2])
 
-hist = np.array(hist)
+histdd = np.array(histdd).squeeze()
 
 fig = plt.figure()
-plt.plot(hist[:,2])
+plt.grid()
+plt.plot(z[:,7])
