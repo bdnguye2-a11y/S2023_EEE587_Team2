@@ -26,7 +26,7 @@ g = 9.81
 #     0,1,2, 3 ,  4  , 5 ,  6  ,  7 
 #     8,9,10,11, 12  , 13, 14  , 15
 
-q0 = np.array([0,0,2.0,0,0,0,0.002,0.002,0,0,0,0,0,0,0,0])
+q0 = np.array([0,0,2.0,0,0,0,0.2,0.2,0,0,0,0,0,0,0,.2])
 
 s = lambda angle: np.sin(angle)
 c = lambda angle: np.cos(angle)
@@ -107,36 +107,39 @@ U = np.array([[9.59],
 
 q = q0.copy()
 
-# def evolve(inq,innt,inU):
-#     print(inq.shape)
-#     return (np.linalg.inv(M_q(inq.squeeze()))@(b_q(inq.squeeze())@inU - C_q(inq.squeeze())@inq[8:].reshape(8,1)-G_q(inq.squeeze()))).squeeze()
+def evolve(inq,innt):
+    inU = U
+    temp = np.zeros(16)
+    temp[:8] = inq[8:]
+    temp[8:]=(np.linalg.inv(M_q(inq.squeeze()))@(b_q(inq.squeeze())@inU - C_q(inq.squeeze())@inq[8:].reshape(8,1)-G_q(inq.squeeze()))).squeeze()
+    return temp
 
-# t,y = scipy.integrate.odeint(evolve,q0,np.linspace(0,4,1000),args=U)
+y = scipy.integrate.odeint(evolve,q0,np.linspace(0,4,10000))
 
-dt = .001
-time = np.linspace(0,10,int(10/dt)+1)
-steps = 20000
-z = np.zeros((steps,16))
-qd = q0[8:].copy().reshape(8,1)
-qn = q0[:8].copy().reshape(8,1)
-histdd = []
+# dt = .001
+# time = np.linspace(0,10,int(10/dt)+1)
+# steps = 20000
+# z = np.zeros((steps,16))
+# qd = q0[8:].copy().reshape(8,1)
+# qn = q0[:8].copy().reshape(8,1)
+# histdd = []
 
-for i in trange(steps):
-    # if i==2500:
-    #     U[0,0] = 0
-    qdd = np.linalg.inv(M_q(q.squeeze()))@(b_q(q.squeeze())@U - C_q(q.squeeze())@q[8:].reshape(8,1)-G_q(q.squeeze()))
-    histdd.append(qdd)
-    qd += 0.5*dt*(qdd+q[8:].reshape(8,1))
-    qn += 0.5*dt*(qd+q[:8].reshape(8,1))
-    q = np.concatenate((qn,qd))
-    z[i] = q.T.copy()
+# for i in trange(steps):
+#     # if i==2500:
+#     #     U[0,0] = 0
+#     qdd = np.linalg.inv(M_q(q.squeeze()))@(b_q(q.squeeze())@U - C_q(q.squeeze())@q[8:].reshape(8,1)-G_q(q.squeeze()))
+#     histdd.append(qdd)
+#     qd += 0.5*dt*(qdd+q[8:].reshape(8,1))
+#     qn += 0.5*dt*(qd+q[:8].reshape(8,1))
+#     q = np.concatenate((qn,qd))
+#     z[i] = q.T.copy()
 
 fig = plt.figure()
 ax = fig.add_subplot(projection='3d')
-ax.plot(z[:,0],z[:,1],z[:,2])
+ax.plot(y[:,0],y[:,1],y[:,2])
 
-histdd = np.array(histdd).squeeze()
+# histdd = np.array(histdd).squeeze()
 
 fig = plt.figure()
 plt.grid()
-plt.plot(z[:1000,10])
+plt.plot(y[:,2])
