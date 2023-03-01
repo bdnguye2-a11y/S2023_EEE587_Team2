@@ -107,14 +107,16 @@ U = np.array([[.1],
 q = q0.copy()
 
 dt = .001
-time = np.linspace(0,10,int(10/dt)+1)
+time = np.linspace(0,10,int(10/dt)+1) # not used... Why is there a steps value? For the loading bar?
 steps = 5000
 z = np.zeros((steps,16))
-qd = q0[8:].copy().reshape(8,1)
-qn = q0[:8].copy().reshape(8,1)
+qd = q0[8:].copy().reshape(8,1) # first derivative ?
+qn = q0[:8].copy().reshape(8,1) # position values ?
 
 for i in trange(steps):
     qdd = np.linalg.inv(M_q(q.squeeze()))@(b_q(q.squeeze())@U - C_q(q.squeeze())@q[8:].reshape(8,1)-G_q(q.squeeze()))
+
+    # where does 0.5*dt(...) come from? should it be qd += qdd*dt instead?
     qd += 0.5*dt*(qdd+q[8:].reshape(8,1))
     qn += 0.5*dt*(qd+q[:8].reshape(8,1))
     q = np.concatenate((qn,qd))
