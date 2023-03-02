@@ -10,9 +10,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sympy as sp
 from tqdm import *
+import scipy
 
 M = .5
-m = .1
+m = .5
 d = .015
 Ipsi = 1
 Ithe = 1
@@ -25,7 +26,8 @@ g = 9.81
 #     0,1,2, 3 ,  4  , 5 ,  6  ,  7 
 #     8,9,10,11, 12  , 13, 14  , 15
 
-q0 = np.array([0,0,2.0,0,0,0,0,0,0,0,0,0,0,0,0,0])
+#              x,y,z  ,s,t,f,a,b,x,y,z,s,t,f,a   ,b
+q0 = np.array([0,0,2.0,0,0,0,np.pi/4,0,0,0,0,0,0,0,0,.1])
 
 s = lambda angle: np.sin(angle)
 c = lambda angle: np.cos(angle)
@@ -50,7 +52,7 @@ m88 = lambda q:m*l**2*s(q[6])**2+Ip
 M_q = lambda q: np.array([[m11,0,0,0,0,0,m17(q),m18(q)],
                           [0,m11,0,0,0,0,m27(q),m28(q)],
                           [0,0,m11,0,0,0,m37(q),0],
-                          [0,0,0,m44(q),m45(q),-Iphi*s(q[4]),0,0],
+                          [0,0,0,m44(q),m45(q),-Ipsi*s(q[4]),0,0],
                           [0,0,0,m45(q),m55(q),0,0,0],
                           [0,0,0,-Ipsi*s(q[4]),0,Ipsi,0,0],
                           [m17(q),m27(q),m37(q),0,0,0,m77,0],
@@ -63,7 +65,7 @@ c28 = lambda q: m*l*(c(q[6])*c(q[7])*q[14]-s(q[6])*s(q[7])*q[15])
 c44 = lambda q: Ipsi*q[12]*s(q[4])*c(q[4])-(Ithe+Iphi)*(q[12]*s(q[4])*c(q[4])*s(q[5])**2)+\
                 (Ithe-Iphi)*q[13]*c(q[4])**2*s(q[5])*c(q[5])
 c45 = lambda q: Ipsi*q[11]*s(q[4])*c(q[4])-(Ithe-Iphi)*(q[12]*s(q[4])*c(q[5])*s(q[5])+q[13]*c(q[4])*s(q[5])**2)\
-                +(Ithe+Iphi)*(q[11]*s(q[4])*c(q[4])*c(q[5])**2-q[13]*c(q[4])*c(q[5])**2)
+                -(Ithe+Iphi)*(q[11]*s(q[4])*c(q[4])*c(q[5])**2-q[13]*c(q[4])*c(q[5])**2)
 
 c46 = lambda q: -(Ipsi*q[12]*c(q[4])-(Ithe-Iphi)*(q[11]*c(q[4])**2*s(q[5])*c(q[5])))
 c54 = lambda q: q[11]*s(q[4])*c(q[4])*(-Ipsi+Ithe*s(q[5])**2+Iphi*c(q[5])**2)
@@ -99,12 +101,55 @@ b_q = lambda q:np.array([[s(q[6])*s(q[3])+c(q[5])*c(q[3])*s(q[4]),0,0,0],
                          [0,0,0,0],
                          [0,0,0,0]])
 
-U = np.array([[.1],
-              [.0001],
-              [.0001],
+U = np.array([[9.81],
+              [0],
+              [0],
               [0]])
 
 q = q0.copy()
+
+def evolve(inq,innt,inU=U,noise=0):
+    if noise != 0:
+        
+    temp = np.zeros(16)
+    temp[:8] = inq[8:]
+    temp[8:]=(np.linalg.inv(M_q(inq.squeeze()))@(b_q(inq.squeeze())@inU - C_q(inq.squeeze())@inq[8:].reshape(8,1)-G_q(inq.squeeze()))).squeeze()
+    return temp
+
+t = np.linspace(0,4,10000)
+y = scipy.integrate.odeint(evolve,q0,t,args=(U,t))
+
+# dt = .001
+# time = np.linspace(0,10,int(10/dt)+1)
+# steps = 20000
+# z = np.zeros((steps,16))
+# qd = q0[8:].copy().reshape(8,1)
+# qn = q0[:8].copy().reshape(8,1)
+# histdd = []
+
+# for i in trange(steps):
+#     # if i==2500:
+#     #     U[0,0] = 0
+#     qdd = np.linalg.inv(M_q(q.squeeze()))@(b_q(q.squeeze())@U - C_q(q.squeeze())@q[8:].reshape(8,1)-G_q(q.squeeze()))
+#     histdd.append(qdd)
+#     qd += 0.5*dt*(qdd+q[8:].reshape(8,1))
+#     qn += 0.5*dt*(qd+q[:8].reshape(8,1))
+#     q = np.concatenate((qn,qd))
+#     z[i] = q.T.copy()
+
+fig = plt.figure()
+ax = fig.add_subplot(projection='3d')
+ax.plot(y[:,0],y[:,1],y[:,2])
+
+# histdd = np.array(histdd).squeeze()
+
+fig = plt.figure()
+plt.grid()
+plt.plot(y[:,0])
+
+fig = plt.figure()
+plt.grid()
+plt.plot(y[:,2])
 
 dt = .001
 time = np.linspace(0,10,int(10/dt)+1) # not used... Why is there a steps value? For the loading bar?
@@ -125,3 +170,4 @@ for i in trange(steps):
 for i in range(8):
     plt.plot(z[:,i])
     plt.show()
+
