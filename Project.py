@@ -136,6 +136,7 @@ class NL_QUADCOPTER:
 if __name__ == "__main__":
     sim = NL_QUADCOPTER()
     q0 = np.array([0, 0, 2.0, 0, 0, 0, np.pi / 4, 0, 0, 0, 0, 0, 0, 0, 0, .1])
-    u = [0, 0, 0, 0]
-    dt = 0.01
-    y = sim.evolve([dt], q0, u)
+    T = np.linspace(0, 5, 500)
+    u = np.zeros((len(T), 4))
+    for i in range(len(T)):
+        y = sim.evolve([T[i]], q0, u[i].T)
