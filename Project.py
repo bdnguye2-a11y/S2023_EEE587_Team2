@@ -110,7 +110,7 @@ q = q0.copy()
 
 def evolve(inq,innt,inU=U,noise=0):
     if noise != 0:
-        
+
     temp = np.zeros(16)
     temp[:8] = inq[8:]
     temp[8:]=(np.linalg.inv(M_q(inq.squeeze()))@(b_q(inq.squeeze())@inU - C_q(inq.squeeze())@inq[8:].reshape(8,1)-G_q(inq.squeeze()))).squeeze()
@@ -150,24 +150,3 @@ plt.plot(y[:,0])
 fig = plt.figure()
 plt.grid()
 plt.plot(y[:,2])
-
-dt = .001
-time = np.linspace(0,10,int(10/dt)+1) # not used... Why is there a steps value? For the loading bar?
-steps = 5000
-z = np.zeros((steps,16))
-qd = q0[8:].copy().reshape(8,1) # first derivative ?
-qn = q0[:8].copy().reshape(8,1) # position values ?
-
-for i in trange(steps):
-    qdd = np.linalg.inv(M_q(q.squeeze()))@(b_q(q.squeeze())@U - C_q(q.squeeze())@q[8:].reshape(8,1)-G_q(q.squeeze()))
-
-    # where does 0.5*dt(...) come from? should it be qd += qdd*dt instead?
-    qd += 0.5*dt*(qdd+q[8:].reshape(8,1))
-    qn += 0.5*dt*(qd+q[:8].reshape(8,1))
-    q = np.concatenate((qn,qd))
-    z[i] = q.T
-
-for i in range(8):
-    plt.plot(z[:,i])
-    plt.show()
-
