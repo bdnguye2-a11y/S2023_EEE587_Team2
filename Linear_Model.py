@@ -39,7 +39,7 @@ sp.init_printing(use_unicode=True)
 # g = 1
 
 ###########Vince's Checks################
-
+print('Initializing Variables...')
 c = lambda x: sp.cos(x)
 s = lambda x: sp.sin(x)
 syms = []
@@ -155,7 +155,7 @@ zetadot = sp.diff(zeta,t)
 etadot = sp.diff(eta,t)
 
 zetapdot = sp.diff(zetap,t)
-
+print("Determining Euler-Lagrange formulation...")
 L = 0.5*M*zetadot.T*zetadot+0.5*etadot.T*J*etadot
 L += 0.5*m*zetapdot.T*zetapdot
 L=L[0]
@@ -196,16 +196,143 @@ eqs = dL-b*u
 
 X = [*q,*qdot]
 
-sim_eqs = sp.zeros(8,1)
+eqs2 = eqs[:]
+
+states = sp.symbols('x_1:17')
+dstates = dynamicsymbols('x_1:17')
+
+print('Making subsitutions to isolate state variables')
 
 for i in trange(8):
-    sim_eqs[i] = sp.simplify(eqs[i])
+    for j in range(16):
+        eqs2[i] = eqs2[i].subs(X[15-j],dstates[15-j])
 
-M_q = sp.zeros(8,8)
+q = sp.Matrix([x,y,z,psi,theta,phi,alpha,beta])
+qdot = sp.diff(q,t)
+# qddot = sp.diff(qdot,t)
+
+qddot = sp.zeros(8,1)
+
+for i in range(8):
+    qddot[i] = sp.diff(dstates[8+i],t)
+
+sbls = sp.symbols('xdot_9:17')
+
+eqs3 = eqs2[:]
+
+for i in trange(8):
+    for j in range(8):
+        eqs3[i] = eqs3[i].subs(qddot[j],sbls[j])
+print("Generating linear Equation to Matrix...")
+mat0,b0=sp.linear_eq_to_matrix(eqs3,sbls)
+print("Reducing linear equation to generate x_dot=F(X,U) formulation...")
+
+mat1 = (mat0**-1)*b0
+
+# print("Simplifying (going to take some time)...")
+# NB don't do this it takes way too long
+# mat2 = sp.zeros(8,1)
+
+# for i in trange(8):
+#     mat2[i] = sp.simplify(mat1[i])
+
+print('Calculating A and B matrices...')
+
+A_ = sp.zeros(16)
+B_ = sp.zeros(16,4)
+print('Finding easy part of A...')
 
 for row in trange(8):
-    for column in range(8):
-        M_q[row,column] = sp.diff(sim_eqs[row],sp.diff(X[column],t,2))
+    A_[row,row+8] = 1
+    
+print('Finding hard part of A...')
+
+with tqdm(total = 8*16) as pbar:
+    for row in range(8):
+        for column in range(16):
+            pbar.set_description(f'Calculating Jacobian with respect to {states[column]} which is {X[column]}')
+            A_[row+8,column] = sp.diff(mat1[row],dstates[column])
+            pbar.update(1)
+
+print('Finding B matrix...')
+
+with tqdm(total = 8) as pbar:
+    for row in range(8):
+        for column in range(4):
+            pbar.set_description(f'Calculating Jacobian with respect to {u[column]}')
+            B_[row+8,column] = sp.diff(mat1[row],u[column])
+            pbar.update(1)
+
+print('Resubstituting pretty variables into State matrixes for readability...')
+
+pretty_syms = [sp.symbols('x'),
+               sp.symbols('y'),
+               sp.symbols('z'),
+               sp.symbols('psi'),
+               sp.symbols('theta'),
+               sp.symbols('phi'),
+               sp.symbols('alpha'),
+               sp.symbols('beta'),
+               sp.symbols('xdot'),
+               sp.symbols('ydot'),
+               sp.symbols('zdot'),
+               sp.symbols('psidot'),
+               sp.symbols('thetadot'),
+               sp.symbols('phidot'),
+               sp.symbols('alphadot'),
+               sp.symbols('betadot')]
+
+with tqdm(total = 8*16*16+8*4*16) as pbar:
+    for row in trange(8,16):
+        for column in range(16):
+            for k in range(16):
+                pbar.set_description(f'substituting for {pretty_syms[k]} in A_{row}_{column}')
+                A_[row,column] =  A_[row,column].subs(dstates[k],pretty_syms[k])
+                pbar.update(1)
+        for column in range(4):
+            for k in range(16):
+                pbar.set_description(f'substituting for {pretty_syms[k]} in B_{row}_{column}')
+                B_[row,column] = B_[row,column].subs(dstates[k],pretty_syms[k])
+                pbar.update(1)
+                
+def A_linearize(inq,inu):
+    temp = sp.zeros(16)
+    for row in range(16):
+        for column in range(16):
+            temp[row,column] = A_[row,column].subs(pretty_syms[0],inq[0])
+            for k in range(1,16):
+                temp[row,column] = temp[row,column].subs(pretty_syms[k],inq[k])
+            for k in range(4):
+                temp[row,column] = temp[row,column].subs(u[k],inu[k])
+    return temp
+        
+def B_linearize(inq,inu):
+    temp = sp.zeros(16,4)
+    for row in range(16):
+        for column in range(4):
+            temp[row,column] = A_[row,column].subs(pretty_syms[0],inq[0])
+            for k in range(1,16):
+                temp[row,column] = temp[row,column].subs(pretty_syms[k],inq[k])
+            for k in range(4):
+                temp[row,column] = temp[row,column].subs(u[k],inu[k])
+    return temp
+
+# sim_eqs = sp.zeros(8,1)
+
+# for i in trange(8):
+#     sim_eqs[i] = sp.simplify(eqs2[i])
+
+# M_q = sp.zeros(8,8)
+
+# for row in trange(8):
+#     for column in range(8):
+#         M_q[row,column] = sp.diff(eqs2[row],sp.diff(states[column],t))
+
+# C_q = sp.zeros(8,8)
+
+# for row in trange(8):
+#     for column in range(8):
+#         C_q[row,column] = sp.diff(sim_eqs[row],qdot[column])
 
 
 
