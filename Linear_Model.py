@@ -3,39 +3,40 @@ import matplotlib.pyplot as plt
 from scipy.integrate import odeint
 import sympy as sp
 from sympy.physics.mechanics import dynamicsymbols
+from tqdm import *
 
 sp.init_printing(use_unicode=True)
 
-def derive(x, t, u):
-    xd = Ac @ x.squeeze() + np.transpose(Bc) @ u
-    return xd.squeeze()
+# def derive(x, t, u):
+#     xd = Ac @ x.squeeze() + np.transpose(Bc) @ u
+#     return xd.squeeze()
 
-def inner(in1,in2):
-    return in1[0]*in2[0]+in1[1]*in2[1]+in1[2]*in2[2]
+# def inner(in1,in2):
+#     return in1[0]*in2[0]+in1[1]*in2[1]+in1[2]*in2[2]
 
-class vec():
-    def __init__(self,ina,inb,inc):
-        self.a = ina
-        self.b = inb
-        self.c = inc
-    def diff(self,insym = False):
-        if type(insym) == bool:
-            if insym == False:
-                tempa = sp.diff(self.a)
-                tempb = sp.diff(self.b)
-                tempc = sp.diff(self.c)
-                return vec(tempa,tempb,tempc)
-            if type(insym) == vec:
-                tempa 
+# class vec():
+#     def __init__(self,ina,inb,inc):
+#         self.a = ina
+#         self.b = inb
+#         self.c = inc
+#     def diff(self,insym = False):
+#         if type(insym) == bool:
+#             if insym == False:
+#                 tempa = sp.diff(self.a)
+#                 tempb = sp.diff(self.b)
+#                 tempc = sp.diff(self.c)
+#                 return vec(tempa,tempb,tempc)
+#             if type(insym) == vec:
+#                 tempa 
 
-l = 0.15
-m = 0.3
-M = 1
-Ip = 0.1
-Izz = 1
-Iyy = 1
-Ixx = 1
-g = 1
+# l = 0.15
+# m = 0.3
+# M = 1
+# Ip = 0.1
+# Izz = 1
+# Iyy = 1
+# Ixx = 1
+# g = 1
 
 ###########Vince's Checks################
 
@@ -123,11 +124,11 @@ I_phi = sp.symbols('I_phi')
 
 I_p = sp.symbols('I_p')
 
-ctrls = []
-ctrls.append(sp.symbols('u_1'))
-ctrls.append(sp.symbols('tau_psi'))
-ctrls.append(sp.symbols('tau_theta'))
-ctrls.append(sp.symbols('tau_phi'))
+# ctrls = []
+# ctrls.append(sp.symbols('u_1'))
+# ctrls.append(sp.symbols('tau_psi'))
+# ctrls.append(sp.symbols('tau_theta'))
+# ctrls.append(sp.symbols('tau_phi'))
 
 zeta = sp.Matrix([x,y,z])
 r = sp.Matrix([s(alpha)*c(beta),s(alpha)*s(beta),-c(alpha)])
@@ -158,7 +159,7 @@ zetapdot = sp.diff(zetap,t)
 L = 0.5*M*zetadot.T*zetadot+0.5*etadot.T*J*etadot
 L += 0.5*m*zetapdot.T*zetapdot
 L=L[0]
-L += 0.5*Ip*(alphadot**2+betadot**2)
+L += 0.5*I_p*(alphadot**2+betadot**2)
 L -= M*g*z
 L -= m*g*(z-l*c(alpha))
 
@@ -175,10 +176,40 @@ for i in range(len(qdot)):
 for i in range(len(qdot)):
     dL[i] -= sp.diff(L,q[i])
     
-B = sp.zeros(16,4)
+b = sp.zeros(8,4)
+
+b[0,0] = s(alpha)*s(psi)+c(phi)*c(psi)*s(theta)
+b[1,0] = c(phi)*s(theta)*s(psi)-c(psi)*s(phi)
+b[2,0] = c(theta)*c(phi)
+b[3,1]=1
+b[4,2]=1
+b[5,3]=1
+
+u = sp.zeros(4,1)
+
+u[0] = sp.symbols('U_T')
+u[1] = sp.symbols('U_phi')
+u[2] = sp.symbols('U_theta')
+u[3] = sp.symbols('U_psi')
+
+eqs = dL-b*u
+
+X = [*q,*qdot]
+
+sim_eqs = sp.zeros(8,1)
+
+for i in trange(8):
+    sim_eqs[i] = sp.simplify(eqs[i])
+
+M_q = sp.zeros(8,8)
+
+for row in trange(8):
+    for column in range(8):
+        M_q[row,column] = sp.diff(sim_eqs[row],sp.diff(X[column],t,2))
 
 
 
+'''
 xddot = ctrls[0]*((s(phi)*s(psi)+c(phi)*c(psi)*s(theta))-(m*l*c(alpha)*alphaddots+l*m*s(alpha)*alphadot**2))/(m+M)
 yddot = ctrls[0]*((c(phi)*s(theta)*s(psi)-c(psi)*s(phi))-(m*l*c(beta)*betaddots+l*m*s(beta)*betadot**2))/(m+M)
 zddot = (ctrls[0]*(c(theta)*c(phi)-(m+M)*g-m*l*(s(alpha)*c(beta)*alphaddots-m*l*(s(beta)*c(alpha)*betaddots-m*l*betadot**2*c(alpha)-m*l*betadot**2*c(beta)+2*M*l*s(beta)*s(alpha)*alphadot*betadot))))/(m+M)
@@ -291,3 +322,4 @@ plt.title('Position')
 # plt.plot(payload_position[2, :])
 # plt.title('Payload Position')
 plt.show()
+'''
