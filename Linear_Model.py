@@ -11,7 +11,7 @@ def derive(x, t, u):
     return xd.squeeze()
 
 def inner(in1,in2):
-    retun in1[0]*in2[0]+in1[1]*in2[1]+in1[2]*in2[2]
+    return in1[0]*in2[0]+in1[1]*in2[1]+in1[2]*in2[2]
 
 class vec():
     def __init__(self,ina,inb,inc):
@@ -19,13 +19,13 @@ class vec():
         self.b = inb
         self.c = inc
     def diff(self,insym = False):
-        if class(insym) == bool:
+        if type(insym) == bool:
             if insym == False:
                 tempa = sp.diff(self.a)
                 tempb = sp.diff(self.b)
                 tempc = sp.diff(self.c)
                 return vec(tempa,tempb,tempc)
-            if class(insym) == vec:
+            if type(insym) == vec:
                 tempa 
 
 l = 0.15
@@ -80,6 +80,8 @@ syms.append(sp.diff(syms[-1]))
 syms.append(dynamicsymbols('beta'))
 syms.append(sp.diff(syms[-1]))
 
+t = sp.symbols('t')
+
 x = syms[0]
 xdot = syms[1]
 y = syms[2]
@@ -99,6 +101,7 @@ alphadot = syms[13]
 beta = syms[14]
 betadot = syms[15]
 
+q = [x,y,z,psi,theta,phi,alpha,beta]
 
 # xddots = sp.symbols('xddot')
 # yddots = sp.symbols('yddot')
@@ -114,9 +117,11 @@ l = sp.symbols('l')
 M = sp.symbols('M')
 g = sp.symbols('g')
 
-I_x = sp.symbols('I_x')
-I_y = sp.symbols('I_y')
-I_z = sp.symbols('I_z')
+I_psi = sp.symbols('I_psi')
+I_theta = sp.symbols('I_theta')
+I_phi = sp.symbols('I_phi')
+
+I_p = sp.symbols('I_p')
 
 ctrls = []
 ctrls.append(sp.symbols('u_1'))
@@ -124,7 +129,55 @@ ctrls.append(sp.symbols('tau_psi'))
 ctrls.append(sp.symbols('tau_theta'))
 ctrls.append(sp.symbols('tau_phi'))
 
-L = 0.5*M
+zeta = sp.Matrix([x,y,z])
+r = sp.Matrix([s(alpha)*c(beta),s(alpha)*s(beta),-c(alpha)])
+zetap = zeta+l*r
+eta = sp.Matrix([psi,theta,phi])
+
+J = sp.zeros(3,3)
+
+s_th = s(theta)
+c_th = c(theta)
+c_ph = c(phi)
+s_ph = s(phi)
+
+J[0,0] = I_psi*s_th**2 + I_theta*c_th**2*s_ph**2+I_phi*c_th**2*c_ph**2
+J[0,1] = c_th*c_ph*s_ph*(I_theta-I_phi)
+J[1,0] = J[0,1]
+J[1,1] = I_theta*c_ph**2+I_phi*s_ph**2
+J[0,2] = -I_psi*s_th
+J[2,0] = J[0,2]
+#J[1,2] = 0
+J[2,2] = I_psi
+
+zetadot = sp.diff(zeta,t)
+etadot = sp.diff(eta,t)
+
+zetapdot = sp.diff(zetap,t)
+
+L = 0.5*M*zetadot.T*zetadot+0.5*etadot.T*J*etadot
+L += 0.5*m*zetapdot.T*zetapdot
+L=L[0]
+L += 0.5*Ip*(alphadot**2+betadot**2)
+L -= M*g*z
+L -= m*g*(z-l*c(alpha))
+
+qdot = []
+
+for i in q:
+    qdot.append(sp.diff(i,t))
+
+dL = sp.zeros(8,1)
+    
+for i in range(len(qdot)):
+    dL[i] = (sp.diff(sp.diff(L,qdot[i]),t))
+
+for i in range(len(qdot)):
+    dL[i] -= sp.diff(L,q[i])
+    
+B = sp.zeros(16,4)
+
+
 
 xddot = ctrls[0]*((s(phi)*s(psi)+c(phi)*c(psi)*s(theta))-(m*l*c(alpha)*alphaddots+l*m*s(alpha)*alphadot**2))/(m+M)
 yddot = ctrls[0]*((c(phi)*s(theta)*s(psi)-c(psi)*s(phi))-(m*l*c(beta)*betaddots+l*m*s(beta)*betadot**2))/(m+M)
