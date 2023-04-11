@@ -10,6 +10,7 @@ from scipy.integrate import odeint
 import sympy as sp
 from sympy.physics.mechanics import dynamicsymbols
 from tqdm import *
+import control as ctl
 
 sp.init_printing(use_unicode=True)
 
@@ -214,22 +215,80 @@ with tqdm(total = 8*20) as pbar:
             pbar.update(1)
 ########################################################
 #x,y,z,psi,theta,phi,alpha,beta
-eq = [0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0]
 
 def linearize(inQ,inU):
     tempA = sp.zeros(16)
     tempB = sp.zeros(16,4)
+    
+    for row in range(16):
+        for column in range(16):
+            tempA[row,column] = A_[row,column]
+    
+    for row in range(16):
+        for column in range(4):
+            tempB[row,column] = B_[row,column]
+    
     for row in range(8,16):
         for j in range(16):
             for column in range(16):
-                tempA[row,column] = A_[row,column].subs(sbls[j],inQ[j])
+                tempA[row,column] = tempA[row,column].subs(sbls[j],inQ[j])
                 if column < 4:
-                    tempB[row,column] = B_[row,column].subs(sbls[j,inQ[j]])
+                    tempB[row,column] = tempB[row,column].subs(sbls[j],inQ[j])
         for j in range(4):
             for column in range(16):
-                tempA[row,column] = A_[row,column].subs(sbls[j],inU[j])
+                tempA[row,column] = tempA[row,column].subs(inpts[j],inU[j])
                 if column < 4:
-                    tempB[row,column] = B_[row,column].subs(sbls[j,inU[j]])
-                    
+                    tempB[row,column] = tempB[row,column].subs(inpts[j],inU[j])
+    
+    return np.array(tempA).astype(float),np.array(tempB).astype(float)
 
-P_0 = sp.
+#x,y,z,psi,theta,phi,alpha,beta
+
+eq = np.array([0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0])
+initU = np.array([1,0,0,0])
+
+A,B = linearize(eq,initU)
+C = np.zeros((1,16))
+C[0,0] = 1
+
+sys = ctl.c2d(ctl.ss(A,B,C,0),.001)
+
+Ad = sys.A
+Bd = sys.B
+Cd = sys.C
+Dd = sys.D
+
+P_0 = np.eye(16)
+
+Q = np.eye(16)
+R = np.eye(4)
+
+state = np.zeros((16,1))
+state[0][0] = -1
+state[1][0] = -1
+state[2][0] = -1
+control = np.zeros((4,1))
+control[0] = 1
+
+states = [state]
+
+P = [P_0]
+F = []
+
+def relinearize(inQ,inU):
+    A,B = linearize(inQ,inU)
+    C = np.zeros((1,16))
+    C[0,0] = 1
+    sys = ctl.c2d(ctl.ss(A,B,C,0),.001)    
+    return sys.A,sys.B
+
+for k in trange(3000):
+
+    F_k1 = -np.linalg.inv(R+B.T@P[-1]@B)@B.T@P[-1]@A
+    F.append(F_k1)
+    P_k = (A+B@F[-1]).T@P[-1]@(A+B@F[-1])+F[-1].T@R@F[-1]+Q
+    P.append(P_k)
+
+for i in trange(1000):
+    states.append(A@)
+    
