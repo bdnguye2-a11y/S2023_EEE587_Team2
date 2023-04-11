@@ -260,7 +260,7 @@ Dd = sys.D
 
 P_0 = np.eye(16)
 
-Q = np.eye(16)
+Q = 100*np.eye(16)
 R = np.eye(4)
 
 state = np.zeros((16,1))
@@ -284,11 +284,23 @@ def relinearize(inQ,inU):
 
 for k in trange(3000):
 
-    F_k1 = -np.linalg.inv(R+B.T@P[-1]@B)@B.T@P[-1]@A
+    F_k1 = -np.linalg.inv(R+Bd.T@P[-1]@Bd)@Bd.T@P[-1]@Ad
     F.append(F_k1)
-    P_k = (A+B@F[-1]).T@P[-1]@(A+B@F[-1])+F[-1].T@R@F[-1]+Q
+    P_k = (Ad+Bd@F[-1]).T@P[-1]@(Ad+Bd@F[-1])+F[-1].T@R@F[-1]+Q
     P.append(P_k)
 
-for i in trange(1000):
-    states.append(A@)
+for i in trange(len(F)):
+    states.append(Ad@states[-1]+Bd@F[i]@states[-1])
     
+xs = []
+ys = []
+zs = []
+ctls = []
+
+for i in range(3000):
+    ctls.append((F[i]@states[i])[0])
+    
+    xs.append(states[i][0])
+    ys.append(states[i][1])
+    zs.append(states[i][2])
+    # test.append(states[i].sum())
