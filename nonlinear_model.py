@@ -244,10 +244,10 @@ def linearize(inQ,inU):
 
 #x,y,z,psi,theta,phi,alpha,beta
 
-eq = np.array([0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0])
-initU = np.array([1,0,0,0])
+eq = np.array([[-1,-1,-1,0,np.pi/7,0,0,0, 0,0,0,0,0,0,0,0]]).T
+initU = np.array([[1,0,0,0]]).T
 
-A,B = linearize(eq,initU)
+A,B = linearize(eq[:,0],initU[:,0])
 C = np.zeros((1,16))
 C[0,0] = 1
 
@@ -260,17 +260,16 @@ Dd = sys.D
 
 P_0 = np.eye(16)
 
-Q = 100*np.eye(16)
-R = np.eye(4)
+Q = np.ones(16)
+Q[0] = 1
+Q[2] = 1
+Q[6] = 3
+Q = np.diag(Q)
+R = .01*np.ones(4)
 
-state = np.zeros((16,1))
-state[0][0] = -1
-state[1][0] = -1
-state[2][0] = -1
-control = np.zeros((4,1))
-control[0] = 1
+R = np.diag(R)
 
-states = [state]
+states = [eq]
 
 P = [P_0]
 F = []
@@ -282,25 +281,112 @@ def relinearize(inQ,inU):
     sys = ctl.c2d(ctl.ss(A,B,C,0),.001)    
     return sys.A,sys.B
 
-for k in trange(3000):
+N = 10000
 
+for k in trange(N):
+    
     F_k1 = -np.linalg.inv(R+Bd.T@P[-1]@Bd)@Bd.T@P[-1]@Ad
     F.append(F_k1)
     P_k = (Ad+Bd@F[-1]).T@P[-1]@(Ad+Bd@F[-1])+F[-1].T@R@F[-1]+Q
     P.append(P_k)
-
+    
+    
+    
 for i in trange(len(F)):
-    states.append(Ad@states[-1]+Bd@F[i]@states[-1])
+    states.append(Ad@states[-1]+Bd@F[N-i]@states[-1])
     
 xs = []
 ys = []
 zs = []
-ctls = []
+psis = []
+thetas = []
+phis = []
+alphas = []
+betas = []
+xdots = []
+ydots = []
+zdots = []
+psidots = []
+thetadots = []
+phidots = []
+alphadots = []
+betadots = []
 
-for i in range(3000):
-    ctls.append((F[i]@states[i])[0])
+thrust = []
+pitch = []
+yaw = []
+roll = []
+
+for i in trange(N):
+    thrust.append((F[i]@states[i])[0])
+    pitch.append((F[i]@states[i])[2])
+    yaw.append((F[i]@states[i])[1])
+    roll.append((F[i]@states[i])[3])
+    
+    # if i == 1500:
+    #     relinearize(states[-1],)
     
     xs.append(states[i][0])
     ys.append(states[i][1])
     zs.append(states[i][2])
-    # test.append(states[i].sum())
+    psis.append(states[i][3])
+    thetas.append(states[i][4])
+    phis.append(states[i][5])
+    alphas.append(states[i][6])
+    betas.append(states[i][7])
+    xdots.append(states[i][8])
+    ydots.append(states[i][9])
+    zdots.append(states[i][10])
+    psidots.append(states[i][11])
+    thetadots.append(states[i][12])
+    phidots.append(states[i][13])
+    alphadots.append(states[i][14])
+    betadots.append(states[i][15])
+
+plt.figure(0)
+plt.plot(xs)
+plt.plot(ys)
+plt.plot(zs)
+plt.title('Position')
+plt.legend(['x','y','z'])
+plt.figure(1)
+plt.plot(xdots)
+plt.plot(ydots)
+plt.plot(zdots)
+plt.title('Velocity')
+plt.legend(['x','y','z'])
+plt.grid()
+plt.figure(2)
+plt.plot(psis)
+plt.plot(thetas)
+plt.plot(phis)
+plt.title('Angle')
+plt.legend([r'$\psi$',r'$\theta$',r'$\phi$'])
+plt.grid()
+plt.figure(3)
+plt.plot(psidots)
+plt.plot(thetadots)
+plt.plot(phidots)
+plt.title('Angular Velocity')
+plt.legend([r'$\dot{\psi}$',r'$\dot{\theta}$',r'$\dot{\phi}$'])
+plt.grid()
+plt.figure(4)
+plt.plot(alphas)
+plt.plot(betas)
+plt.title('Swing Angle')
+plt.legend([r'$\alpha$',r'$\beta$'])
+plt.grid()
+plt.figure(5)
+plt.plot(alphadots)
+plt.plot(betadots)
+plt.title('Swing Angular Velocity')
+plt.legend([r'$\dot{\alpha}$',r'$\dot{\beta}$'])
+plt.grid()
+plt.figure(6)
+plt.plot(thrust)
+plt.plot(pitch)
+plt.plot(yaw)
+plt.plot(roll)
+plt.title('Controls')
+plt.legend(['Thrust','pitch','yaw','roll'])
+plt.grid()
