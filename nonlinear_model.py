@@ -190,7 +190,7 @@ costate = temp
 
 W1 = sp.symbols('W1_1:9')
 W2 = sp.symbols('W2_1:9')
-R  = sp.symbols('R_1:9')
+R  = sp.symbols('R_1:5')
 
 temp = sp.zeros(8)
 for i in range(8):
@@ -200,12 +200,12 @@ temp = sp.zeros(8)
 for i in range(8):
     temp[i,i] = W2[i]
 W2 = temp
-temp = sp.zeros(8)
-for i in range(8):
+temp = sp.zeros(4)
+for i in range(4):
     temp[i,i] = R[i]
 R = temp
 
-H = 0.5*X1.T*W1*X1+0.5*X2.T*W2*X2+0.5*U.T*R*U+costate.T*Xdot
+H = 0.5*X1.T*W1*X1+0.5*X2.T*W2*X2+0.5*u.T*R*u+costate.T*Xdot
 
 #conditions
 X_dot = sp.zeros(16,1)
@@ -222,9 +222,67 @@ for i in trange(16):
     else:
         lambda_dot[i] = -sp.diff(H,X[i])
 
-control_eqs = sp.zeros(16,1)
+control_eqs = sp.zeros(4,1)
+
+for i in range(4):
+    control_eqs[i] = sp.diff(H,u[i])
 
 
+mat0,b0 = sp.linear_eq_to_matrix(control_eqs,[u[0],u[1],u[2],u[3]])
+
+controls = mat0**-1*b0
+
+for i in trange(16):
+    for j in range(4):
+        lambda_dot[i] = lambda_dot[i].subs(u[j],controls[j])
+        X_dot[i] = X_dot[i].subs(u[j],controls[j])
+
+params = [m,l,M,g,I_psi,I_theta,I_phi,I_p]
+vals = [.3,.242,.56,9.81,.0021,.006178,.006178,.56*.242**2]
+
+w1 = np.array([10,10,10,1,1,1,10,.1])
+w2 = np.array([1,1,1,1,1,1,10,.1])
+r_ctl = np.array([1,1,1,1])
+
+with tqdm(total = 16*8*2) as pbar:
+    for i in range(16):
+        for j in range(len(vals)):
+            lambda_dot[i] = lambda_dot[i].subs(params[j],vals[j])
+            pbar.update(1)
+            X_dot[i] = X_dot[i].subs(params[j],vals[j])
+            pbar.update(1)
+
+with tqdm(total = 4*16*8) as pbar:
+    for i in range(16):
+        for j in range(8):
+            lambda_dot[i] = (lambda_dot[i].subs(W1[j,j],w1[j])).subs(W2[j,j],w2[j])
+            pbar.update(1)
+            X_dot[i] = (X_dot[i].subs(W1[j,j],w1[j])).subs(W2[j,j],w2[j])
+            pbar.update(1)
+        for j in range(4):
+            lambda_dot[i] = lambda_dot[i].subs(R[j,j],r_ctl[j])
+            pbar.update(1)
+            X_dot[i] = X_dot[i].subs(R[j,j],r_ctl[j])
+            pbar.update(1)
+
+x0 = np.array([[-1],
+               [-1],
+               [-1],
+               [0],
+               [0],
+               [0],
+               [0],
+               [0],
+               
+               [0],
+               [0],
+               [0],
+               [0],
+               [0],
+               [0],
+               [0],
+               [0]])
+r
 
 ##################################################
 # Rough Linearization
