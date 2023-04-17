@@ -10,7 +10,7 @@ from scipy.integrate import odeint
 import sympy as sp
 from sympy.physics.mechanics import dynamicsymbols
 from tqdm import *
-import control as ctl
+# import control as ctl
 
 sp.init_printing(use_unicode=True)
 
@@ -206,6 +206,7 @@ for i in range(4):
 R = temp
 
 H = 0.5*X1.T*W1*X1+0.5*X2.T*W2*X2+0.5*u.T*R*u+costate.T*Xdot
+h = 0.5*X1.T*W1*X1+0.5*X2.T*W2*X2+0.5*u.T*R*u
 
 #conditions
 X_dot = sp.zeros(16,1)
@@ -226,7 +227,6 @@ control_eqs = sp.zeros(4,1)
 
 for i in range(4):
     control_eqs[i] = sp.diff(H,u[i])
-
 
 mat0,b0 = sp.linear_eq_to_matrix(control_eqs,[u[0],u[1],u[2],u[3]])
 
@@ -252,7 +252,7 @@ with tqdm(total = 16*8*2) as pbar:
             X_dot[i] = X_dot[i].subs(params[j],vals[j])
             pbar.update(1)
 
-with tqdm(total = 4*16*8) as pbar:
+with tqdm(total = 4*16*8+8+4) as pbar:
     for i in range(16):
         for j in range(8):
             lambda_dot[i] = (lambda_dot[i].subs(W1[j,j],w1[j])).subs(W2[j,j],w2[j])
@@ -264,7 +264,14 @@ with tqdm(total = 4*16*8) as pbar:
             pbar.update(1)
             X_dot[i] = X_dot[i].subs(R[j,j],r_ctl[j])
             pbar.update(1)
-
+    
+    for i in range(8):
+        h = h.subs(W1[i,i],w1[i]).subs(W2[i,i],w2[i])
+        pbar.update(1)
+    for i in range(4):
+        h = h.subs(R[i,i],r_ctl[i])
+        pbar.update(1)
+    
 x0 = np.array([[-1],
                [-1],
                [-1],
@@ -282,7 +289,8 @@ x0 = np.array([[-1],
                [0],
                [0],
                [0]])
-r
+
+
 
 ##################################################
 # Rough Linearization
