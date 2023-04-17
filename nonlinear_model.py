@@ -205,7 +205,7 @@ for i in range(4):
     temp[i,i] = R[i]
 R = temp
 
-H = (0.5*X1.T*W1*X1+0.5*X2.T*W2*X2+0.5*u.T*R*u+costate.T*Xdot)[0]+1
+H = (0.5*X1.T*W1*X1+0.5*X2.T*W2*X2+0.5*u.T*R*u+costate.T*Xdot)[0]
 
 xf = sp.Matrix([[1],
                [1],
@@ -225,7 +225,10 @@ xf = sp.Matrix([[1],
                [0],
                [0]])
 
-h = 0.5*((X[0]-xf[0])**2+(X[1]-xf[1])**2+(X[2]-xf[2])**2)
+h = 0
+
+for i in range(16):
+    h += 0.5*(X[i]-xf[i])**2
 
 #conditions
 X_dot = sp.zeros(16,1)
@@ -344,7 +347,7 @@ x0 = np.array([[0],
 
 sys = mat1**-1*b1
 
-def sys_f()
+def sys_f(inQ,incostate,intime)
 ##################################################
 # Rough Linearization
 ##################################################
