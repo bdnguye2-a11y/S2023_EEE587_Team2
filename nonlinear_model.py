@@ -205,7 +205,7 @@ for i in range(4):
     temp[i,i] = R[i]
 R = temp
 
-H = 0.5*X1.T*W1*X1+0.5*X2.T*W2*X2+0.5*u.T*R*u+costate.T*Xdot
+H = (0.5*X1.T*W1*X1+0.5*X2.T*W2*X2+0.5*u.T*R*u+costate.T*Xdot)[0]+1
 
 xf = sp.Matrix([[1],
                [1],
@@ -298,11 +298,9 @@ with tqdm(total = 4*16*8+8+4) as pbar:
         H = H.subs(R[i,i],r_ctl[i])
         pbar.update(1)
 
-
-
-x0 = np.array([[-1],
-               [-1],
-               [-1],
+xf = sp.Matrix([[1],
+               [1],
+               [1],
                [0],
                [0],
                [0],
@@ -318,8 +316,35 @@ x0 = np.array([[-1],
                [0],
                [0]])
 
+mat1 = sp.eye(16*2+1)
+temp = sp.diff(h,t)
+mat1[-1,0] = sp.diff(temp,X[8])
+mat1[-1,1] = sp.diff(temp,X[9])
+mat1[-1,2] = sp.diff(temp,X[10])
 
+b1 = sp.Matrix([X_dot,lambda_dot,H])
 
+x0 = np.array([[0],
+               [0],
+               [0],
+               [0],
+               [0],
+               [0],
+               [0],
+               [0],
+               
+               [0],
+               [0],
+               [0],
+               [0],
+               [0],
+               [0],
+               [0],
+               [0]])
+
+sys = mat1**-1*b1
+
+def sys_f()
 ##################################################
 # Rough Linearization
 ##################################################
