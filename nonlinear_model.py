@@ -206,7 +206,26 @@ for i in range(4):
 R = temp
 
 H = 0.5*X1.T*W1*X1+0.5*X2.T*W2*X2+0.5*u.T*R*u+costate.T*Xdot
-h = 0.5*X1.T*W1*X1+0.5*X2.T*W2*X2+0.5*u.T*R*u
+
+xf = sp.Matrix([[1],
+               [1],
+               [1],
+               [0],
+               [0],
+               [0],
+               [0],
+               [0],
+               
+               [0],
+               [0],
+               [0],
+               [0],
+               [0],
+               [0],
+               [0],
+               [0]])
+
+h = 0.5*((X[0]-xf[0])**2+(X[1]-xf[1])**2+(X[2]-xf[2])**2)
 
 #conditions
 X_dot = sp.zeros(16,1)
@@ -231,27 +250,33 @@ for i in range(4):
 mat0,b0 = sp.linear_eq_to_matrix(control_eqs,[u[0],u[1],u[2],u[3]])
 
 controls = mat0**-1*b0
-
+H2 = H
 for i in trange(16):
     for j in range(4):
         lambda_dot[i] = lambda_dot[i].subs(u[j],controls[j])
         X_dot[i] = X_dot[i].subs(u[j],controls[j])
+for j in trange(4):
+    H2 = H2.subs(u[j],controls[j])
 
 params = [m,l,M,g,I_psi,I_theta,I_phi,I_p]
 vals = [.3,.242,.56,9.81,.0021,.006178,.006178,.56*.242**2]
 
-w1 = np.array([10,10,10,1,1,1,10,.1])
-w2 = np.array([1,1,1,1,1,1,10,.1])
+w1 = np.array([0,0,0,0,0,0,10,0])
+w2 = np.array([0,0,0,0,0,0,10,0])
 r_ctl = np.array([1,1,1,1])
 
-with tqdm(total = 16*8*2) as pbar:
+with tqdm(total = 16*8*2+len(vals)) as pbar:
     for i in range(16):
         for j in range(len(vals)):
             lambda_dot[i] = lambda_dot[i].subs(params[j],vals[j])
             pbar.update(1)
             X_dot[i] = X_dot[i].subs(params[j],vals[j])
             pbar.update(1)
-
+    
+    for i in range(len(vals)):
+        H = H.subs(params[i],vals[i])
+        pbar.update(1)
+    
 with tqdm(total = 4*16*8+8+4) as pbar:
     for i in range(16):
         for j in range(8):
@@ -266,12 +291,15 @@ with tqdm(total = 4*16*8+8+4) as pbar:
             pbar.update(1)
     
     for i in range(8):
+        H = H.subs(W1[i,i],w1[i]).subs(W2[i,i],w2[i])
         h = h.subs(W1[i,i],w1[i]).subs(W2[i,i],w2[i])
         pbar.update(1)
     for i in range(4):
-        h = h.subs(R[i,i],r_ctl[i])
+        H = H.subs(R[i,i],r_ctl[i])
         pbar.update(1)
-    
+
+
+
 x0 = np.array([[-1],
                [-1],
                [-1],
