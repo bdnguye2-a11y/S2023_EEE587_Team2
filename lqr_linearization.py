@@ -334,6 +334,9 @@ for i in range(len(F)):
 
 Q2 = np.diag([10,10,10, 0,0,0, 10,0, 0,0,0, 0,0,0, 0,0])
 
+plt.plot(xs)
+plt.plot(ys)
+plt.plot(zs)
 
 
 # mat1 = sp.eye(16*2+1)
