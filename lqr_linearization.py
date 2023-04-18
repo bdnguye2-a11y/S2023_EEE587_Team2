@@ -265,6 +265,24 @@ x0 = np.array([[-1],
                 [0],
                 [0]])
 
+xf = np.array([[0],
+                [0],
+                [0],
+                [0],
+                [0],
+                [0],
+                [0],
+                [0],
+               
+                [0],
+                [0],
+                [0],
+                [0],
+                [0],
+                [0],
+                [0],
+                [0]])
+
 u0 = np.array([10,.001,.001,.001])
 
 A,B = linearize(x0,u0)
@@ -296,11 +314,27 @@ Bd = sysd.B
 
 xst = x0
 ust = u0
-for i in range(num):
+for i in trange(num):
     F_calc = -np.linalg.inv(R+Bd.T@P[-1]@Bd)@Bd.T@P[-1]@Ad
     
     F.append(F_calc)
     P_calc = (Ad+Bd@F[-1]).T@P[-1]@(Ad+Bd@F[-1])+F[-1].T@R@F[-1]+Q
+    P.append(P_calc)
+
+xst = x0
+xs = [x0[0,0]]
+ys = [x0[1,0]]
+zs = [x0[2,0]]
+for i in range(len(F)):
+    xst = Ad@xst+Bd@F[-i]@xst
+    xs.append(xst[0,0])
+    ys.append(xst[1,0])
+    zs.append(xst[2,0])
+    als = []
+
+Q2 = np.diag([10,10,10, 0,0,0, 10,0, 0,0,0, 0,0,0, 0,0])
+
+
 
 # mat1 = sp.eye(16*2+1)
 # temp = sp.diff(h,t)
