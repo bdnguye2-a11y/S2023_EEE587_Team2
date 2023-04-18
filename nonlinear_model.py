@@ -14,6 +14,29 @@ from tqdm import *
 
 sp.init_printing(use_unicode=True)
 
+def calc(inA,inB,inC):
+    
+    temp = inA
+    tempn = len(inB)
+    # print(tempn)
+    # print(len(inB))
+    # print(len(inC))
+    # print('')
+    for i in range(tempn):
+        inA = inA.subs(inB[tempn-i-1],inC[tempn-i-1])
+    return inA
+
+def multi_calc(inA,inB,inC):
+    tempn1 = len(inA)
+    tempn2 = len(inB)
+    
+    temp = inA
+    
+    for i in range(tempn1):
+        for j in range(tempn2):
+            temp[i] = calc(temp[i],inB,inC)
+    return temp
+
 
 print('Initializing Variables...')
 c = lambda x: sp.cos(x)
@@ -283,7 +306,7 @@ with tqdm(total = 16*8*2+len(vals)) as pbar:
         H = H.subs(params[i],vals[i])
         pbar.update(1)
     
-with tqdm(total = 4*16*8+8+4) as pbar:
+with tqdm(total = 396) as pbar:
     for i in range(16):
         for j in range(8):
             lambda_dot[i] = (lambda_dot[i].subs(W1[j,j],w1[j])).subs(W2[j,j],w2[j])
@@ -347,13 +370,34 @@ x0 = np.array([[0],
                [0],
                [0]])
 
-sys = mat1**-1*b1
+p0 = np.array([[0],
+               [0],
+               [0],
+               [0],
+               [0],
+               [0],
+               [0],
+               [0],
+               
+               [0],
+               [0],
+               [0],
+               [0],
+               [0],
+               [0],
+               [0],
+               [0]])
 
-def sys_f(inQ,incostate=0,intime=0):
-    
-    temp = H
-    for i in range(16):
-        temp = temp.subs(X[15-])
+sys = sp.Matrix([X_dot,lambda_dot])
+
+def sys_f(inq,incos):
+    temp = sys
+    for j in trange(32):
+        for i in range(16):
+            temp[j,0] = (temp[j,0].subs(X[15-i],inq[15-i][0])).subs(costate[15-i],incos[15-i][0])
+    return temp
+
+test = sys_f(x0,p0)
     
 ##################################################
 # Rough Linearization
