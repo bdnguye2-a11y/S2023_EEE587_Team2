@@ -225,10 +225,13 @@ xf = sp.Matrix([[1],
                [0],
                [0]])
 
+skip = [3,4,5,7,11,12,13]
+
 h = 0
 
 for i in range(16):
-    h += 0.5*(X[i]-xf[i])**2
+    if not(i in skip):
+        h += 0.5*(X[i]-xf[i])**2
 
 #conditions
 X_dot = sp.zeros(16,1)
@@ -321,9 +324,8 @@ xf = sp.Matrix([[1],
 
 mat1 = sp.eye(16*2+1)
 temp = sp.diff(h,t)
-mat1[-1,0] = sp.diff(temp,X[8])
-mat1[-1,1] = sp.diff(temp,X[9])
-mat1[-1,2] = sp.diff(temp,X[10])
+for i in range(16):
+    mat1[-1,i] = sp.diff(temp,sp.diff(X[i],t))
 
 b1 = sp.Matrix([X_dot,lambda_dot,H])
 
@@ -347,7 +349,12 @@ x0 = np.array([[0],
 
 sys = mat1**-1*b1
 
-def sys_f(inQ,incostate,intime)
+def sys_f(inQ,incostate=0,intime=0):
+    
+    temp = H
+    for i in range(16):
+        temp = temp.subs(X[15-])
+    
 ##################################################
 # Rough Linearization
 ##################################################
