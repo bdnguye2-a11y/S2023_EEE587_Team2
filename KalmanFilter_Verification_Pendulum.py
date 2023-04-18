@@ -11,12 +11,6 @@ def pendulumEqn(x_val, t, m, l, b, g):
     return x
 
 
-def getSimResult(x_init, m, l, b, g, time, samples):
-    t = np.linspace(0.0, time, samples)  # time
-    y = odeint(pendulumEqn, x_init, t, args=(m, l, b, g))
-    return y
-
-
 def main():
     # ~~~~~~~~~~~~~~~~ Actual Model
     x_init = np.array([np.pi / 18.0, 0.0])
@@ -26,7 +20,10 @@ def main():
     g = 9.81
     time = 20
     samples = 3001
-    y = getSimResult(x_init, m, l, b, g, time, samples)
+    timer = np.linspace(0, time, samples)
+
+    t = np.linspace(0.0, timer, samples)  # time
+    y = odeint(pendulumEqn, x_init, t, args=(m, l, b, g))
 
     # ~~~~~~~~~~~~~~~~ Kalman Filter Verification begins
     measurementNoiseVariance = 0.02
@@ -61,8 +58,6 @@ def main():
         KFilter.predict(U=U, x_hat=x_hat[:, i - 1:i])
         # Update
         x_hat[:, i:i + 1] = KFilter.update(y_meas=z[i])
-
-    timer = np.linspace(0, time, samples)
 
     # Angle plot
     plt.figure(1)
