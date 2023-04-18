@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Apr 10 20:41:20 2023
+Created on Mon Apr 17 21:10:11 2023
 
 @author: Vince
 """
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import odeint
 import sympy as sp
 from sympy.physics.mechanics import dynamicsymbols
 from tqdm import *
-# import control as ctl
+import control as ctl
 
 sp.init_printing(use_unicode=True)
 
@@ -212,184 +213,94 @@ F2 = N+Z*U
 
 Xdot = sp.Matrix([F1,F2])
 
+xsbls = sp.symbols('x1:17')
 
-##########################
-####PMP
-#########################
-
-costate = sp.symbols('lambda1:17')
-temp = sp.zeros(16,1)
-for i in range(16):
-    temp[i] = costate[i]
-costate = temp
-
-W1 = sp.symbols('W1_1:9')
-W2 = sp.symbols('W2_1:9')
-R  = sp.symbols('R_1:5')
-
-temp = sp.zeros(8)
-for i in range(8):
-    temp[i,i] = W1[i]
-W1 = temp
-temp = sp.zeros(8)
-for i in range(8):
-    temp[i,i] = W2[i]
-W2 = temp
-temp = sp.zeros(4)
-for i in range(4):
-    temp[i,i] = R[i]
-R = temp
-
-H = (0.5*X1.T*W1*X1+0.5*X2.T*W2*X2+0.5*u.T*R*u+costate.T*Xdot)[0]
-
-xf = sp.Matrix([[1],
-                [1],
-                [1],
-                [0],
-                [0],
-                [0],
-                [0],
-                [0],
-               
-                [0],
-                [0],
-                [0],
-                [0],
-                [0],
-                [0],
-                [0],
-                [0]])
-
-x0 = sp.Matrix([[0],
-                [0],
-                [0],
-                [0],
-                [0],
-                [0],
-                [0],
-                [0],
-               
-                [0],
-                [0],
-                [0],
-                [0],
-                [0],
-                [0],
-                [0],
-                [0]])
-
-skip = [3,4,5,7,11,12,13]
-
-h = 0
-
-for i in range(16):
-    if not(i in skip):
-        h += 0.5*(X[i]-xf[i])**2
-
-#conditions
-X_dot = sp.zeros(16,1)
-
-for i in range(16):
-    X_dot[i] = sp.diff(H,costate[i])
-
-lambda_dot = sp.zeros(16,1)
-
-temp_sym = sp.symbols('temp')
-for i in trange(16):
-    if i < 8:
-        lambda_dot[i] = -(sp.diff(H.subs(X[i+8],temp_sym),X[i])).subs(temp_sym,X[i+8])
-    else:
-        lambda_dot[i] = -sp.diff(H,X[i])
+X_dot = multi_calc(Xdot,X[:,0],xsbls,True)
 
 params = [m,l,M,g,I_psi,I_theta,I_phi,I_p]
 vals = [.3,.242,.56,9.81,.0021,.006178,.006178,.56*.242**2]
 
-w1 = np.array([0,0,0,0,0,0,10,0])
-w2 = np.array([0,0,0,0,0,0,10,0])
-r_ctl = np.array([1,1,1,1])
+X_dot = multi_calc(X_dot,params,vals)
 
-with tqdm(total = 16*8*2+len(vals)) as pbar:
-    for i in range(16):
-        for j in range(len(vals)):
-            lambda_dot[i] = lambda_dot[i].subs(params[j],vals[j])
+A_ = sp.zeros(16)
+B_ = sp.zeros(16,4)
+
+with tqdm(total = 16*16+16*4) as pbar:
+    for row in range(16):
+        for column in range(16):
+            A_[row,column] = sp.diff(X_dot[row],xsbls[column])
             pbar.update(1)
-            X_dot[i] = X_dot[i].subs(params[j],vals[j])
+    for row in range(16):
+        for column in range(4):
+            B_[row,column] = sp.diff(X_dot[row],u[column])
             pbar.update(1)
+
+def linearize(inq,inu):
+    tempA = np.zeros((16,16))
+    tempB = np.zeros((16,4))
     
-    for i in range(len(vals)):
-        H = H.subs(params[i],vals[i])
-        pbar.update(1)
+    for row in range(16):
+        for column in range(16):
+            tempA[row,column] = calc(calc(A_[row,column], xsbls, inq.squeeze()),u[:,0],inu.squeeze())
+        for column in range(4):
+            tempB[row,column] = calc(calc(B_[row,column], xsbls, inq.squeeze()),u[:,0],inu.squeeze())
+    return tempA,tempB
+
+
+x0 = np.array([[-1],
+                [-1],
+                [-1],
+                [0],
+                [0],
+                [0],
+                [0],
+                [0],
+               
+                [0],
+                [0],
+                [0],
+                [0],
+                [0],
+                [0],
+                [0],
+                [0]])
+
+u0 = np.array([10,.001,.001,.001])
+
+A,B = linearize(x0,u0)
+C = np.array([0,0,0, 0,0,0, 1,0, 0,0,0, 0,0,0, 0,0,])
+
+
+H = np.zeros((16,16))
+H[0,0] = 1
+H[1,1] = 1
+H[2,2] = 1
+H[8,8] = 1
+H[9,9] = 1
+H[10,10] = 1
+
+Q = np.diag([10,10,10, 0,0,0, 10,0, 0,0,0, 0,0,0, 0,0])
+R = np.diag([.1,.1,.1,.1])
+
+P = [H]
+F = []
+
+tf = 5
+num = 150
+
+sys = ctl.ss(A,B,C,np.array([0,0,0,0]))
+sysd = ctl.c2d(sys,tf/num)
+
+Ad = sysd.A
+Bd = sysd.B
+
+xst = x0
+ust = u0
+for i in range(num):
+    F_calc = -np.linalg.inv(R+Bd.T@P[-1]@Bd)@Bd.T@P[-1]@Ad
     
-with tqdm(total = 396) as pbar:
-    for i in range(16):
-        for j in range(8):
-            lambda_dot[i] = (lambda_dot[i].subs(W1[j,j],w1[j])).subs(W2[j,j],w2[j])
-            pbar.update(1)
-            X_dot[i] = (X_dot[i].subs(W1[j,j],w1[j])).subs(W2[j,j],w2[j])
-            pbar.update(1)
-        for j in range(4):
-            lambda_dot[i] = lambda_dot[i].subs(R[j,j],r_ctl[j])
-            pbar.update(1)
-            X_dot[i] = X_dot[i].subs(R[j,j],r_ctl[j])
-            pbar.update(1)
-    
-    for i in range(8):
-        H = H.subs(W1[i,i],w1[i]).subs(W2[i,i],w2[i])
-        h = h.subs(W1[i,i],w1[i]).subs(W2[i,i],w2[i])
-        pbar.update(1)
-    for i in range(4):
-        H = H.subs(R[i,i],r_ctl[i])
-        pbar.update(1)
-
-
-
-xsbls = sp.symbols('x1:17')
-psbls = sp.symbols('p1:17')
-Xd_sym = multi_calc(X_dot,X[:,0],xsbls)
-Ld_sym = multi_calc(lambda_dot,costate[:,0],psbls,True)
-Ld_sym = multi_calc(Ld_sym,X[:,0],xsbls,True)
-
-tf = 3
-Ts = .01
-
-N = int(tf/Ts)
-
-ictl = np.array([10,.001,.001,.001])
-
-ctls = []
-xsts = []
-psts = []
-
-xst_u = multi_calc(Xd_sym,xsbls,x0[:,0])
-xst = multi_calc(xst_u,u[:,0],ictl)
-
-xsts.append(xst)
-
-for i in trange(N):
-    ctls.append(ictl)
-    xst_u = multi_calc(Xd_sym,xsbls,xsts[-1])
-    xst = multi_calc(xst_u,u[:,0],ctls[-1])
-    xsts.append(xst)
-    
-
-
-control_eqs = sp.zeros(4,1)
-
-for i in range(4):
-    control_eqs[i] = sp.diff(H,u[i])
-
-mat0,b0 = sp.linear_eq_to_matrix(control_eqs,[u[0],u[1],u[2],u[3]])
-
-controls = mat0**-1*b0
-H2 = H
-for i in trange(16):
-    for j in range(4):
-        lambda_dot[i] = lambda_dot[i].subs(u[j],controls[j])
-        X_dot[i] = X_dot[i].subs(u[j],controls[j])
-for j in trange(4):
-    H2 = H2.subs(u[j],controls[j])
-
-
+    F.append(F_calc)
+    P_calc = (Ad+Bd@F[-1]).T@P[-1]@(Ad+Bd@F[-1])+F[-1].T@R@F[-1]+Q
 
 # mat1 = sp.eye(16*2+1)
 # temp = sp.diff(h,t)
@@ -398,23 +309,7 @@ for j in trange(4):
 
 # b1 = sp.Matrix([X_dot,lambda_dot,H])
 
-# x0 = np.array([[0],
-#                [0],
-#                [0],
-#                [0],
-#                [0],
-#                [0],
-#                [0],
-#                [0],
-               
-#                [0],
-#                [0],
-#                [0],
-#                [0],
-#                [0],
-#                [0],
-#                [0],
-#                [0]])
+
 
 # p0 = np.array([[0],
 #                [0],
