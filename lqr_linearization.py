@@ -308,16 +308,15 @@ num = 150
 
 tinv = np.linspace(0,5,151)
 
-sys = ctl.ss(A,B,C,np.array([0,0,0,0]))
-sysd = ctl.c2d(sys,tf/num)
+def discretize(inq,inu):
+    tempA,tempB = linearize(inq,inu)
+    tempC = np.array([0,0,0, 0,0,0, 1,0, 0,0,0, 0,0,0, 0,0])
+    sysd = ctl.c2d(ctl.ss(tempA,tempB,tempC,np.array([0,0,0,0])),tf/num)
+    
+    return sysd.A,sysd.B
+    
+Ad,Bd = discretize(x0, u0)
 
-Ad = sysd.A
-Bd = sysd.B
-
-
-
-xst = x0
-ust = u0
 for i in trange(num):
     F_calc = -np.linalg.inv(R+Bd.T@P[-1]@Bd)@Bd.T@P[-1]@Ad
     
@@ -326,17 +325,60 @@ for i in trange(num):
     P.append(P_calc)
 
 xst = x0
-xs = [x0[0,0]]
-ys = [x0[1,0]]
-zs = [x0[2,0]]
-als = [0]
-for i in range(len(F)):
-    xst = Ad@xst+Bd@F[-i]@xst
-    xs.append(xst[0,0])
-    ys.append(xst[1,0])
-    zs.append(xst[2,0])
-    als.append(xst[6,0])
+xsts = [xst]
+
+usts = [ust]
+
+for i in range(1,len(F)+1):
+    ust = F[-i]@xst
+    xst = Ad@xst+Bd@ust
+    xsts.append(xst)
+
+xst = x0
+xsts2 = [x0]
+
+for i in trange(1,num):
+    ust = F[-i]@xst
+    Ad,Bd = discretize(xst,ust)
+    xsts2.append(Ad@xst+B@ust)
     
+    
+
+Ads = [Ad]
+Bds = [Bd]
+
+F2 = []
+
+for j in trange(2,num):
+    
+    xst = xsts[-j]
+    ust = F[-j+1]@xst
+    Ad,Bd = discretize(xst,ust)
+    
+    F2.append(F[-j+1])
+    
+    for i in trange(j,num):
+        F_calc = -np.linalg.inv(R+Bd.T@P2[-1]@Bd)@Bd.T@P2[-1]@Ad
+        
+        F2.append(F_calc)
+        P_calc = (Ad+Bd@F[-1]).T@P2[-1]@(Ad+Bd@F2[-1])+F2[-1].T@R@F2[-1]+Q
+        P2.append(P_calc)
+    
+    for i in trange(1,len(F)):
+        ust = F[-i]@xst
+        Ad,Bd = discretize(xst,ust)
+        Ads.append(Ad)
+        Bds.append(Bd)
+        xst = Ad@xst+Bd@ust
+        xsts2.append(xst)
+
+
+xsts2 = np.array(xsts2).squeeze()
+
+fig = plt.figure()
+ax = fig.add_subplot(projection='3d')
+ax.plot(xsts2[:,0],xsts2[:,1],xsts2[:,2])
+ax.plot(xsts[:,0],xsts[:,1],xsts[:,2])
 
 # plt.figure(1)
 # plt.plot(tinv,als)
