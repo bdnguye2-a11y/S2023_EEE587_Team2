@@ -306,11 +306,15 @@ F = []
 tf = 5
 num = 150
 
+tinv = np.linspace(0,5,151)
+
 sys = ctl.ss(A,B,C,np.array([0,0,0,0]))
 sysd = ctl.c2d(sys,tf/num)
 
 Ad = sysd.A
 Bd = sysd.B
+
+
 
 xst = x0
 ust = u0
@@ -325,277 +329,96 @@ xst = x0
 xs = [x0[0,0]]
 ys = [x0[1,0]]
 zs = [x0[2,0]]
+als = [0]
 for i in range(len(F)):
     xst = Ad@xst+Bd@F[-i]@xst
     xs.append(xst[0,0])
     ys.append(xst[1,0])
     zs.append(xst[2,0])
-    als = []
-
-Q2 = np.diag([10,10,10, 0,0,0, 10,0, 0,0,0, 0,0,0, 0,0])
-
-plt.plot(xs)
-plt.plot(ys)
-plt.plot(zs)
-
-
-# mat1 = sp.eye(16*2+1)
-# temp = sp.diff(h,t)
-# for i in range(16):
-#     mat1[-1,i] = sp.diff(temp,sp.diff(X[i],t))
-
-# b1 = sp.Matrix([X_dot,lambda_dot,H])
-
-
-
-# p0 = np.array([[0],
-#                [0],
-#                [0],
-#                [0],
-#                [0],
-#                [0],
-#                [0],
-#                [0],
-               
-#                [0],
-#                [0],
-#                [0],
-#                [0],
-#                [0],
-#                [0],
-#                [0],
-#                [0]])
-
-# sys = sp.Matrix([X_dot,lambda_dot])
-
-# def sys_f(inq,incos):
-#     temp = sys
-#     for j in trange(32):
-#         for i in range(16):
-#             temp[j,0] = (temp[j,0].subs(X[15-i],inq[15-i][0])).subs(costate[15-i],incos[15-i][0])
-#     return temp
-
-# test = sys_f(x0,p0)
+    als.append(xst[6,0])
     
-##################################################
-# Rough Linearization
-##################################################
-# X_dot = -M_q**-1*((C_q*qdot)+G_q-U)
 
-# cpy = sp.zeros(8,1)
-# for i in range(8):
-#     cpy[i] = X_dot[i]
-
-# params = [m,l,M,g,I_psi,I_theta,I_phi,I_p]
-# vals = [1,1,7,10,1,1,1,1]
-
-
-
-# for row in trange(8):
-#     for j in range(len(params)):
-#         cpy[row] = cpy[row].subs(params[j],vals[j])
-        
-# # Linearization
-# #################################################
-# sbls = sp.symbols('x1:17')
-# for row in trange(8):
-#     for i in range(8):
-#         state_var = qdot[i]
-#         sub_sym = sbls[i+8]
-#         cpy[row] = cpy[row].subs(state_var,sub_sym)
-#     for i in range(8):
-#         state_var = q[i]
-#         sub_sym = sbls[i]
-#         cpy[row] = cpy[row].subs(state_var,sub_sym)
-
-# A_ = sp.zeros(16)
-# B_ = sp.zeros(16,4)
-
-# with tqdm(total = 8*20) as pbar:
-#     for row in range(8):
-#         A_[row,row+8] = 1
-            
-#     for row in range(8):
-#         for column in range(16):
-#             A_[row+8,column] = sp.diff(cpy[row],sbls[column])
-#             pbar.update(1)
-#         for column in range(4):
-#             B_[row+8,column] = sp.diff(cpy[row],inpts[0])
-#             pbar.update(1)
-# ########################################################
-# #x,y,z,psi,theta,phi,alpha,beta
-
-# def linearize(inQ,inU):
-#     tempA = sp.zeros(16)
-#     tempB = sp.zeros(16,4)
-    
-#     for row in range(16):
-#         for column in range(16):
-#             tempA[row,column] = A_[row,column]
-    
-#     for row in range(16):
-#         for column in range(4):
-#             tempB[row,column] = B_[row,column]
-    
-#     for row in range(8,16):
-#         for j in range(16):
-#             for column in range(16):
-#                 tempA[row,column] = tempA[row,column].subs(sbls[j],inQ[j])
-#                 if column < 4:
-#                     tempB[row,column] = tempB[row,column].subs(sbls[j],inQ[j])
-#         for j in range(4):
-#             for column in range(16):
-#                 tempA[row,column] = tempA[row,column].subs(inpts[j],inU[j])
-#                 if column < 4:
-#                     tempB[row,column] = tempB[row,column].subs(inpts[j],inU[j])
-    
-#     return np.array(tempA).astype(float),np.array(tempB).astype(float)
-
-# #x,y,z,psi,theta,phi,alpha,beta
-
-# eq = np.array([[-1,-1,-1,0,np.pi/7,0,0,0, 0,0,0,0,0,0,0,0]]).T
-# initU = np.array([[1,0,0,0]]).T
-
-# A,B = linearize(eq[:,0],initU[:,0])
-# C = np.zeros((1,16))
-# C[0,0] = 1
-
-# sys = ctl.c2d(ctl.ss(A,B,C,0),.001)
-
-# Ad = sys.A
-# Bd = sys.B
-# Cd = sys.C
-# Dd = sys.D
-
-# P_0 = np.eye(16)
-
-# Q = np.ones(16)
-# Q[0] = 1
-# Q[2] = 1
-# Q[6] = 3
-# Q = np.diag(Q)
-# R = .01*np.ones(4)
-
-# R = np.diag(R)
-
-# states = [eq]
-
-# P = [P_0]
-# F = []
-
-# def relinearize(inQ,inU):
-#     A,B = linearize(inQ,inU)
-#     C = np.zeros((1,16))
-#     C[0,0] = 1
-#     sys = ctl.c2d(ctl.ss(A,B,C,0),.001)    
-#     return sys.A,sys.B
-
-# N = 10000
-
-# for k in trange(N):
-    
-#     F_k1 = -np.linalg.inv(R+Bd.T@P[-1]@Bd)@Bd.T@P[-1]@Ad
-#     F.append(F_k1)
-#     P_k = (Ad+Bd@F[-1]).T@P[-1]@(Ad+Bd@F[-1])+F[-1].T@R@F[-1]+Q
-#     P.append(P_k)
-    
-    
-    
-# for i in trange(len(F)):
-#     states.append(Ad@states[-1]+Bd@F[N-i]@states[-1])
-    
-# xs = []
-# ys = []
-# zs = []
-# psis = []
-# thetas = []
-# phis = []
-# alphas = []
-# betas = []
-# xdots = []
-# ydots = []
-# zdots = []
-# psidots = []
-# thetadots = []
-# phidots = []
-# alphadots = []
-# betadots = []
-
-# thrust = []
-# pitch = []
-# yaw = []
-# roll = []
-
-# for i in trange(N):
-#     thrust.append((F[i]@states[i])[0])
-#     pitch.append((F[i]@states[i])[2])
-#     yaw.append((F[i]@states[i])[1])
-#     roll.append((F[i]@states[i])[3])
-    
-#     # if i == 1500:
-#     #     relinearize(states[-1],)
-    
-#     xs.append(states[i][0])
-#     ys.append(states[i][1])
-#     zs.append(states[i][2])
-#     psis.append(states[i][3])
-#     thetas.append(states[i][4])
-#     phis.append(states[i][5])
-#     alphas.append(states[i][6])
-#     betas.append(states[i][7])
-#     xdots.append(states[i][8])
-#     ydots.append(states[i][9])
-#     zdots.append(states[i][10])
-#     psidots.append(states[i][11])
-#     thetadots.append(states[i][12])
-#     phidots.append(states[i][13])
-#     alphadots.append(states[i][14])
-#     betadots.append(states[i][15])
-
-# plt.figure(0)
-# plt.plot(xs)
-# plt.plot(ys)
-# plt.plot(zs)
-# plt.title('Position')
-# plt.legend(['x','y','z'])
 # plt.figure(1)
-# plt.plot(xdots)
-# plt.plot(ydots)
-# plt.plot(zdots)
-# plt.title('Velocity')
-# plt.legend(['x','y','z'])
+# plt.plot(tinv,als)
+
+# ###
+# xst = x0
+# xs2 = [x0[0,0]]
+# ys2 = [x0[1,0]]
+# zs2 = [x0[2,0]]
+# als2 = [0]
+# for i in range(len(F)):
+#     xst = Ad@xst+Bd@F[-i]@xst+np.random.normal(0,.01,(16,1))
+#     xs2.append(xst[0,0])
+#     ys2.append(xst[1,0])
+#     zs2.append(xst[2,0])
+
+#     als2.append(xst[6,0])
+
+# # plt.figure(2)
+# plt.plot(tinv,xs2)
+# plt.plot(tinv,ys2)
+# plt.plot(tinv,zs2)
+# plt.legend([r'$\alpha$ no filter',r'$\alpha$ Kalman Filter'])
+# plt.xlabel('Time (s)')
+# plt.ylabel('Position (m)')
 # plt.grid()
-# plt.figure(2)
-# plt.plot(psis)
-# plt.plot(thetas)
-# plt.plot(phis)
-# plt.title('Angle')
-# plt.legend([r'$\psi$',r'$\theta$',r'$\phi$'])
+# plt.figure(1)
+# plt.plot(tinv,als2)
+# plt.legend(['Q6=10','Q6=1'])
 # plt.grid()
-# plt.figure(3)
-# plt.plot(psidots)
-# plt.plot(thetadots)
-# plt.plot(phidots)
-# plt.title('Angular Velocity')
-# plt.legend([r'$\dot{\psi}$',r'$\dot{\theta}$',r'$\dot{\phi}$'])
-# plt.grid()
-# plt.figure(4)
-# plt.plot(alphas)
-# plt.plot(betas)
-# plt.title('Swing Angle')
-# plt.legend([r'$\alpha$',r'$\beta$'])
-# plt.grid()
-# plt.figure(5)
-# plt.plot(alphadots)
-# plt.plot(betadots)
-# plt.title('Swing Angular Velocity')
-# plt.legend([r'$\dot{\alpha}$',r'$\dot{\beta}$'])
-# plt.grid()
-# plt.figure(6)
-# plt.plot(thrust)
-# plt.plot(pitch)
-# plt.plot(yaw)
-# plt.plot(roll)
-# plt.title('Controls')
-# plt.legend(['Thrust','pitch','yaw','roll'])
-# plt.grid()
+# ###
+
+Q = np.diag([10,10,10, 0,0,0, 1,0, 0,0,0, 0,0,0, 0,0])
+R = np.diag([.1,.1,.1,.1])
+
+P = [H]
+F = []
+
+xst = x0
+ust = u0
+for i in trange(num):
+    F_calc = -np.linalg.inv(R+Bd.T@P[-1]@Bd)@Bd.T@P[-1]@Ad
+    
+    F.append(F_calc)
+    P_calc = (Ad+Bd@F[-1]).T@P[-1]@(Ad+Bd@F[-1])+F[-1].T@R@F[-1]+Q
+    P.append(P_calc)
+
+xst = x0
+xs2 = [x0[0,0]]
+ys2 = [x0[1,0]]
+zs2 = [x0[2,0]]
+als2 = [0]
+for i in range(len(F)):
+    xst = Ad@xst+Bd@F[-i]@xst
+    xs2.append(xst[0,0])
+    ys2.append(xst[1,0])
+    zs2.append(xst[2,0])
+
+    als2.append(xst[6,0])
+
+
+plt.figure(0)
+plt.plot(tinv,xs)
+plt.plot(tinv,xs2)
+
+plt.figure(1)
+plt.plot(tinv,ys2)
+plt.plot(tinv,ys)
+
+plt.figure(2)
+
+plt.plot(tinv,zs)
+plt.plot(tinv,zs2)
+
+plt.legend(['Q=10','Q=1','Z'])
+plt.xlabel('Time (s)')
+plt.ylabel('Position (m)')
+plt.grid()
+plt.figure(1)
+plt.plot(tinv,als)
+plt.plot(tinv,als2)
+plt.legend(['Q6=10','Q6=1'])
+plt.xlabel('Time (s)')
+plt.ylabel('Angle (deg)')
+plt.grid()
