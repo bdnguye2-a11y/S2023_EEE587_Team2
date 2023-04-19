@@ -263,7 +263,7 @@ def animate(num,lines,walks):
 
 
 ani = animation.FuncAnimation(fig_anim,animate,fargs=(lines,walks),interval=10)
-
+ani.save('animation.gif',writer=animation.PillowWriter(fps=60))
 #plotting 3d positions of drone and payload
 fig = plt.figure()
 ax = fig.add_subplot(projection='3d')

@@ -13,7 +13,9 @@ from sympy.physics.mechanics import dynamicsymbols
 from tqdm import *
 import control as ctl
 
-sp.init_printing(use_unicode=True)
+# sp.init_printing(use_unicode=True)
+sp.init_printing(pretty_print=False)
+
 
 def calc(inA,inB,inC):
     
@@ -256,13 +258,13 @@ x0 = np.array([[-1],
                 [0],
                 [0],
                
+                [-.2],
+                [.3],
+                [.1],
                 [0],
                 [0],
                 [0],
-                [0],
-                [0],
-                [0],
-                [0],
+                [.02],
                 [0]])
 
 xf = np.array([[0],
@@ -297,7 +299,7 @@ H[8,8] = 1
 H[9,9] = 1
 H[10,10] = 1
 
-Q = np.diag([10,10,10, 0,0,0, 10,0, 0,0,0, 0,0,0, 0,0])
+Q = np.diag([0,0,0, 0,0,0, 0,0, 0,0,0, 0,0,0, 0,0])
 R = np.diag([.1,.1,.1,.1])
 
 P = [H]
@@ -317,11 +319,19 @@ def discretize(inq,inu):
     
 Ad,Bd = discretize(x0, u0)
 
+Ads = []
+Bds = []
+
+for i in range(num):
+    Ads.append(Ad)
+    Bds.append(Bd)
+
+usts = []
+
 for i in trange(num):
-    F_calc = -np.linalg.inv(R+Bd.T@P[-1]@Bd)@Bd.T@P[-1]@Ad
-    
+    F_calc = -np.linalg.inv(R+Bds[num-i-1].T@P[-1]@Bds[num-1-i])@Bds[num-1-i].T@P[-1]@Ads[num-1-i]
     F.append(F_calc)
-    P_calc = (Ad+Bd@F[-1]).T@P[-1]@(Ad+Bd@F[-1])+F[-1].T@R@F[-1]+Q
+    P_calc = (Ads[num-1-i]+Bds[num-1-i]@F[-1]).T@P[-1]@(Ads[num-1-i]+Bds[num-1-i]@F[-1])+F[-1].T@R@F[-1]+Q
     P.append(P_calc)
 
 xst = x0
@@ -329,56 +339,107 @@ xsts = [xst]
 
 usts = [ust]
 
-for i in range(1,len(F)+1):
-    ust = F[-i]@xst
+for i in range(num):
+    ust = F[-i-1]@xst
     xst = Ad@xst+Bd@ust
     xsts.append(xst)
 
-xst = x0
-xsts2 = [x0]
+
 
 for i in trange(1,num):
-    ust = F[-i]@xst
+    xst = xsts[num-i]
+    ust = F[i-1]@xst
     Ad,Bd = discretize(xst,ust)
-    xsts2.append(Ad@xst+B@ust)
+    for j in range(num-i+1):
+        Ads[j] = Ad
+        Bds[j] = Bd
     
+    for j in range(i,num):
+        F_calc = -np.linalg.inv(R+Bds[j].T@P[j]@Bds[num-1-j])@Bds[num-1-j].T@P[-1]@Ads[num-1-j]
+        F.append(F_calc)
+        P_calc = (Ads[num-1-i]+Bds[num-1-i]@F[-1]).T@P[-1]@(Ads[num-1-i]+Bds[num-1-i]@F[-1])+F[-1].T@R@F[-1]+Q
+        P[]
+
+    xst = x0
+    for j in range(num-i):
+        xst = Ads[j]@xst+Bds[j]@F[-j-1]@xst
+        xsts[j] = xst
     
 
-Ads = [Ad]
-Bds = [Bd]
+xsts = np.array(xsts).squeeze()
 
-F2 = []
+xs = xsts[:,0]
+ys = xsts[:,1]
+zs = xsts[:,2]
+als = xsts[:,6]
 
-for j in trange(2,num):
+# plt.plot(xsts[:,0])
+# plt.figure()
+# plt.plot(xsts[:,1])
+# plt.figure()
+# plt.plot(xsts[:,2])
+# plt.figure()
+# plt.plot(xsts[:,3])
+# plt.figure()
+# plt.plot(xsts[:,4])
+# plt.figure()
+# plt.plot(xsts[:,5])
+# plt.figure()
+# plt.plot(xsts[:,6])
+# plt.figure()
+# plt.plot(xsts[:,7])
+# plt.figure()
+
+# plt.plot(xsts[:,8])
+# plt.figure()
+# plt.plot(xsts[:,9])
+# plt.figure()
+# plt.plot(xsts[:,10])
+# plt.figure()
+# plt.plot(xsts[:,11])
+# plt.figure()
+# plt.plot(xsts[:,12])
+# plt.figure()
+# plt.plot(xsts[:,13])
+# plt.figure()
+# plt.plot(xsts[:,14])
+# plt.figure()
+# plt.plot(xsts[:,15])
+# plt.figure()
+
+
+
+# F2 = []
+
+# for j in trange(2,num):
     
-    xst = xsts[-j]
-    ust = F[-j+1]@xst
-    Ad,Bd = discretize(xst,ust)
+#     xst = xsts[-j]
+#     ust = F[-j+1]@xst
+#     Ad,Bd = discretize(xst,ust)
     
-    F2.append(F[-j+1])
     
-    for i in trange(j,num):
-        F_calc = -np.linalg.inv(R+Bd.T@P2[-1]@Bd)@Bd.T@P2[-1]@Ad
+    
+#     for i in trange(j,num):
+#         F_calc = -np.linalg.inv(R+Bd.T@P2[-1]@Bd)@Bd.T@P2[-1]@Ad
         
-        F2.append(F_calc)
-        P_calc = (Ad+Bd@F[-1]).T@P2[-1]@(Ad+Bd@F2[-1])+F2[-1].T@R@F2[-1]+Q
-        P2.append(P_calc)
+#         F2.append(F_calc)
+#         P_calc = (Ad+Bd@F[-1]).T@P2[-1]@(Ad+Bd@F2[-1])+F2[-1].T@R@F2[-1]+Q
+#         P2.append(P_calc)
     
-    for i in trange(1,len(F)):
-        ust = F[-i]@xst
-        Ad,Bd = discretize(xst,ust)
-        Ads.append(Ad)
-        Bds.append(Bd)
-        xst = Ad@xst+Bd@ust
-        xsts2.append(xst)
+#     for i in trange(1,len(F)):
+#         ust = F[-i]@xst
+#         Ad,Bd = discretize(xst,ust)
+#         Ads.append(Ad)
+#         Bds.append(Bd)
+#         xst = Ad@xst+Bd@ust
+#         xsts2.append(xst)
 
+# xsts2 = np.array(xsts2).squeeze()
 
-xsts2 = np.array(xsts2).squeeze()
-
-fig = plt.figure()
-ax = fig.add_subplot(projection='3d')
-ax.plot(xsts2[:,0],xsts2[:,1],xsts2[:,2])
-ax.plot(xsts[:,0],xsts[:,1],xsts[:,2])
+# fig = plt.figure()
+# ax = fig.add_subplot(projection='3d')
+# ax.plot(xsts2[:,0],xsts2[:,1],xsts2[:,2])
+# ax.plot(xsts[:,0],xsts[:,1],xsts[:,2])
 
 # plt.figure(1)
 # plt.plot(tinv,als)
@@ -411,7 +472,7 @@ ax.plot(xsts[:,0],xsts[:,1],xsts[:,2])
 # plt.grid()
 # ###
 
-Q = np.diag([10,10,10, 0,0,0, 1,0, 0,0,0, 0,0,0, 0,0])
+Q = np.diag([1,1,1, 0,0,0, 10,0, 0,0,0, 0,0,0, 0,0])
 R = np.diag([.1,.1,.1,.1])
 
 P = [H]
@@ -439,11 +500,10 @@ for i in range(len(F)):
 
     als2.append(xst[6,0])
 
-
 plt.figure(0)
 plt.plot(tinv,xs)
 plt.plot(tinv,xs2)
-plt.legend(['Q6=10','Q6=1'])
+plt.legend(['Q=0','Q=10'])
 plt.xlabel('Time (s)')
 plt.ylabel('X Position (m)')
 plt.grid()
@@ -451,7 +511,7 @@ plt.grid()
 plt.figure(1)
 plt.plot(tinv,ys)
 plt.plot(tinv,ys2)
-plt.legend(['Q=10','Q=1'])
+plt.legend(['Q=0','Q=10'])
 plt.xlabel('Time (s)')
 plt.ylabel('Y Position (m)')
 plt.grid()
@@ -460,7 +520,7 @@ plt.figure(2)
 
 plt.plot(tinv,zs)
 plt.plot(tinv,zs2)
-plt.legend(['Q=10','Q=1'])
+plt.legend(['Q=0','Q=10'])
 plt.xlabel('Time (s)')
 plt.ylabel('Z Position (m)')
 plt.grid()
@@ -468,7 +528,7 @@ plt.grid()
 plt.figure(3)
 plt.plot(tinv,als)
 plt.plot(tinv,als2)
-plt.legend(['Q6=10','Q6=1'])
+plt.legend(['Q6=0','Q6=1'])
 plt.xlabel('Time (s)')
 plt.ylabel(r'Swing Angle $\alpha$ (deg)')
 plt.grid()
