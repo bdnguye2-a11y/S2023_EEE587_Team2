@@ -13,8 +13,8 @@ from sympy.physics.mechanics import dynamicsymbols
 from tqdm import *
 import control as ctl
 
-# sp.init_printing(use_unicode=True)
-sp.init_printing(pretty_print=False)
+sp.init_printing(use_unicode=True)
+# sp.init_printing(pretty_print=False)
 
 
 def calc(inA,inB,inC):
@@ -346,24 +346,24 @@ for i in range(num):
 
 
 
-for i in trange(1,num):
-    xst = xsts[num-i]
-    ust = F[i-1]@xst
-    Ad,Bd = discretize(xst,ust)
-    for j in range(num-i+1):
-        Ads[j] = Ad
-        Bds[j] = Bd
+# for i in trange(1,num):
+#     xst = xsts[num-i]
+#     ust = F[i-1]@xst
+#     Ad,Bd = discretize(xst,ust)
+#     for j in range(num-i+1):
+#         Ads[j] = Ad
+#         Bds[j] = Bd
     
-    for j in range(i,num):
-        F_calc = -np.linalg.inv(R+Bds[j].T@P[j]@Bds[num-1-j])@Bds[num-1-j].T@P[-1]@Ads[num-1-j]
-        F.append(F_calc)
-        P_calc = (Ads[num-1-i]+Bds[num-1-i]@F[-1]).T@P[-1]@(Ads[num-1-i]+Bds[num-1-i]@F[-1])+F[-1].T@R@F[-1]+Q
-        P[]
+#     for j in range(i,num):
+#         F_calc = -np.linalg.inv(R+Bds[j].T@P[j]@Bds[num-1-j])@Bds[num-1-j].T@P[-1]@Ads[num-1-j]
+#         F.append(F_calc)
+#         P_calc = (Ads[num-1-i]+Bds[num-1-i]@F[-1]).T@P[-1]@(Ads[num-1-i]+Bds[num-1-i]@F[-1])+F[-1].T@R@F[-1]+Q
+#         P[]
 
-    xst = x0
-    for j in range(num-i):
-        xst = Ads[j]@xst+Bds[j]@F[-j-1]@xst
-        xsts[j] = xst
+#     xst = x0
+#     for j in range(num-i):
+#         xst = Ads[j]@xst+Bds[j]@F[-j-1]@xst
+#         xsts[j] = xst
     
 
 xsts = np.array(xsts).squeeze()
@@ -372,6 +372,12 @@ xs = xsts[:,0]
 ys = xsts[:,1]
 zs = xsts[:,2]
 als = xsts[:,6]
+
+usts = np.zeros((150,4))
+
+for i in range(150):
+    usts[i,:] = F[-i-1]@xsts[i,:]
+    
 
 # plt.plot(xsts[:,0])
 # plt.figure()
@@ -503,7 +509,7 @@ for i in range(len(F)):
 plt.figure(0)
 plt.plot(tinv,xs)
 plt.plot(tinv,xs2)
-plt.legend(['Q=0','Q=10'])
+plt.legend(['Q=10','Q=1'])
 plt.xlabel('Time (s)')
 plt.ylabel('X Position (m)')
 plt.grid()
@@ -511,7 +517,7 @@ plt.grid()
 plt.figure(1)
 plt.plot(tinv,ys)
 plt.plot(tinv,ys2)
-plt.legend(['Q=0','Q=10'])
+plt.legend(['Q=10','Q=1'])
 plt.xlabel('Time (s)')
 plt.ylabel('Y Position (m)')
 plt.grid()
@@ -520,7 +526,7 @@ plt.figure(2)
 
 plt.plot(tinv,zs)
 plt.plot(tinv,zs2)
-plt.legend(['Q=0','Q=10'])
+plt.legend(['Q=10','Q=1'])
 plt.xlabel('Time (s)')
 plt.ylabel('Z Position (m)')
 plt.grid()
@@ -528,7 +534,17 @@ plt.grid()
 plt.figure(3)
 plt.plot(tinv,als)
 plt.plot(tinv,als2)
-plt.legend(['Q6=0','Q6=1'])
+plt.legend(['Q=1','Q=10'])
 plt.xlabel('Time (s)')
 plt.ylabel(r'Swing Angle $\alpha$ (deg)')
+plt.grid()
+
+plt.figure(4)
+plt.plot(tinv[:150],usts[:,0])
+plt.plot(tinv[:150],usts[:,1])
+plt.plot(tinv[:150],usts[:,2])
+plt.plot(tinv[:150],usts[:,3])
+# plt.legend(['Q=1','Q=10'])
+plt.xlabel('Time (s)')
+plt.ylabel(r'Input')
 plt.grid()
