@@ -12,7 +12,8 @@ from sympy.physics.mechanics import dynamicsymbols
 from tqdm import *
 # import control as ctl
 
-sp.init_printing(use_unicode=True)
+# sp.init_printing(use_unicode=True)
+sp.init_printing(pretty_print=False)
 
 def calc(inA,inB,inC):
     
@@ -230,17 +231,17 @@ R  = sp.symbols('R_1:5')
 temp = sp.zeros(8)
 for i in range(8):
     temp[i,i] = W1[i]
-W1 = temp
+W1s = temp
 temp = sp.zeros(8)
 for i in range(8):
     temp[i,i] = W2[i]
-W2 = temp
+W2s = temp
 temp = sp.zeros(4)
 for i in range(4):
     temp[i,i] = R[i]
-R = temp
+Rs = temp
 
-H = (0.5*X1.T*W1*X1+0.5*X2.T*W2*X2+0.5*u.T*R*u+costate.T*Xdot)[0]
+H = (0.5*X1.T*W1s*X1+0.5*X2.T*W2s*X2+0.5*u.T*Rs*u+costate.T*Xdot)[0]
 
 xf = sp.Matrix([[1],
                 [1],
@@ -278,13 +279,16 @@ x0 = sp.Matrix([[0],
                 [0],
                 [0]])
 
-skip = [3,4,5,7,11,12,13]
+h = (0.5*(xf-X).T*(xf-X)*t)[0]
+dhdt = sp.diff(h,t)
 
-h = 0
+# skip = [3,4,5,7,11,12,13]
 
-for i in range(16):
-    if not(i in skip):
-        h += 0.5*(X[i]-xf[i])**2
+# h = 0
+
+# for i in range(16):
+#     if not(i in skip):
+#         h += 0.5*(X[i]-xf[i])**2
 
 #conditions
 X_dot = sp.zeros(16,1)
@@ -308,7 +312,7 @@ w1 = np.array([0,0,0,0,0,0,10,0])
 w2 = np.array([0,0,0,0,0,0,10,0])
 r_ctl = np.array([1,1,1,1])
 
-with tqdm(total = 16*8*2+len(vals)) as pbar:
+with tqdm(total = 16*8*2+len(vals)+12) as pbar:
     for i in range(16):
         for j in range(len(vals)):
             lambda_dot[i] = lambda_dot[i].subs(params[j],vals[j])
@@ -319,18 +323,72 @@ with tqdm(total = 16*8*2+len(vals)) as pbar:
     for i in range(len(vals)):
         H = H.subs(params[i],vals[i])
         pbar.update(1)
+        
+    for i in range(8):
+        H = H.subs(W1[i],w1[i]).subs(W2[i],w2[i])
+        pbar.update(1)
     
+    for i in range(4):
+        H = H.subs(R[i],r_ctl[i])
+        pbar.update(1)
+
+################
+#Steepest Descent
+tf = 10
+x0 = np.array(x0).astype(float)
+xf = np.array(xf).astype(float)
+
+u0 = np.array([0,0,0,0])
+uf = np.random.random(4)/50
+
+funcs = []
+
+for i in range(16):
+    funcs.append(sp.lambdify((*X,*u),X_dot[i]))
+
+def deriv(inx,intime,inu,in2=0):
+    out = []
+    idxs = [3,4,5,6,7]
+    for i in idxs:
+        if abs(inx[i])>2*np.pi:
+            inx[i] -= np.sign(inx[i])*2*np.pi
+    for i in range(16):
+        out.append(funcs[i](*inx,*inu))
+    return np.array(out).astype(float).squeeze()
+
+N = 30
+
+tint = np.linspace(0,tf,N)
+
+us = []
+
+for i in range(N):
+    us.append(np.random.random(4)/100)
+
+otpt = odeint(deriv,x0,tint,args=(u0,0))
+
+for i in range(16):
+    plt.plot(tint,otpt[:,i])
+    plt.show()
+
+H_func = sp.lambdify((*X,*u),H)
+
+pdot = []
+
+for i in costate:
+    pdot.append(sp.diff(H,i))
+
 with tqdm(total = 396) as pbar:
     for i in range(16):
         for j in range(8):
-            lambda_dot[i] = (lambda_dot[i].subs(W1[j,j],w1[j])).subs(W2[j,j],w2[j])
+            lambda_dot[i] = (lambda_dot[i].subs(W1s[j,j],w1[j])).subs(W2s[j,j],w2[j])
             pbar.update(1)
-            X_dot[i] = (X_dot[i].subs(W1[j,j],w1[j])).subs(W2[j,j],w2[j])
+            X_dot[i] = (X_dot[i].subs(W1s[j,j],w1[j])).subs(W2s[j,j],w2[j])
             pbar.update(1)
         for j in range(4):
-            lambda_dot[i] = lambda_dot[i].subs(R[j,j],r_ctl[j])
+            lambda_dot[i] = lambda_dot[i].subs(Rs[j,j],r_ctl[j])
             pbar.update(1)
-            X_dot[i] = X_dot[i].subs(R[j,j],r_ctl[j])
+            X_dot[i] = X_dot[i].subs(Rs[j,j],r_ctl[j])
             pbar.update(1)
     
     for i in range(8):
@@ -394,7 +452,7 @@ for j in trange(4):
 # mat1 = sp.eye(16*2+1)
 # temp = sp.diff(h,t)
 # for i in range(16):
-#     mat1[-1,i] = sp.diff(temp,sp.diff(X[i],t))
+#     mat1[-1,i] = sp.diff(temp,sp.diff(X[i],t)) 
 
 # b1 = sp.Matrix([X_dot,lambda_dot,H])
 
