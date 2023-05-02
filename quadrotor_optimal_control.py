@@ -6,13 +6,14 @@ Created on Mon May  1 13:49:54 2023
 """
 
 import numpy as np
-from scipy.integrate import odeint
+from scipy.integrate import odeint,solve_ivp
 import matplotlib.pyplot as plt
 # from Library.KalmanFilter import KalmanFilter
 import sympy as sp
 from sympy.physics.mechanics import dynamicsymbols
 from tqdm import *
 import pickle
+import time
 # import control as ctl
 
 # sp.init_printing(use_unicode=True)
@@ -173,6 +174,7 @@ class model():
         self.F2 = N+Z*self.U
 
         self.Xdot = sp.Matrix([self.F1,self.F2])
+        self.costate = list(sp.symbols('p1:17'))
         
     def define_params(self,input_params,input_vals):
         
@@ -193,28 +195,87 @@ class quadrotor():
         self.state = initial_state
         
         self.a = sp.lambdify((*self.model.X,*self.model.u),self.model.Xdot_params)
+        self.state_hist = 0
+        self.time_hist = 0
         
-    def deriv(self,inx,time,inu,tin2=0):
-        
-        return self.a(*inx,*inu).reshape(16)
+
+class controller():
+    def __init__(self,rtr,inxf,init_control=np.zeros(4)):
+        self.u = init_control
+        self.Q = np.diag(np.array([0,0,0, 0,0,0, 10,0, 0,0,0, 0,0,0, 0,0]))
+        self.R = np.diag(np.array([1,1,1,1]))
+        self.typ = ''
+        self.init_H(rtr)
+        self.init_h(rtr,inxf)
     
-    def simulate(self,input_function,dT=.001):
-        end_condition = False
-        otpt = np.array([initial_state.copy()])
-        t = 0
-        while not end_condition:
-            inpt = input_function(self.state,t)
-            otpt = np.concatenate((otpt, odeint(self.deriv,self.state,args=(inpt))),0)
-            if t > 5:
-                end_condition = True
+    def init_H(self,rtr):
         
+        self.H_symbolic = rtr.model.X.T*self.Q*rtr.model.X + rtr.model.u.T*self.R*rtr.model.u+rtr.model.costate.T*rtr.model.Xdot_params
+        self.H_func = sp.lambdify((*rtr.model.X,*rtr.model.u),self.H_symbolic)
+    
+    def init_h(self,rtr,inxf):
+        inxf = inxf.reshape((16,1))
+        self.h_symbolic = 0.5*(rtr.model.X-inxf).T*(rtr.model.X-inxf)
+        self.h_func = sp.lambdify((*rtr.model.X,*rtr.model.u),self.h_symbolic)
+    
+    def H(self,inx,inu):
+        return self.H_func(*inx,*inu).item()
+    
+    def h(self,inx,inu):
+        return self.h_func(*inx,*inu).item()
+    
+    def rando(self,inN):
+        self.hist = np.random.random((inN,4))
+        
+    def cnst(self,inN,u0):
+        
+        self.hist = np.zeros((inN,4))
+        for i in range(4):
+            self.hist[:,i] = u0[i]
+            
+        
+
+def evolve(intime,inx,u1,u2,u3,u4):
+    return rotor.a(*inx,u1,u2,u3,u4).squeeze()
+
+def simulate(ctrl_inpt):
+    t = 0
+    tf = 5
+    dT = .001
+    N = (tf-t)/dT+1
+    rotor.state_hist = np.zeros((N,16))
+    idx = 0
+    rotor.state_hist = []
+    rotor.time_hist = []
+    with tqdm(total=N) as pbar:
+        while t < tf:
+            outpt = solve_ivp(evolve,[t,t+dT],rotor.state,args=(ctrl_inpt[idx]))
+            rotor.state = outpt.y[:,-1]
+            t+=dT
+            idx+=1
+            rotor.state_hist.append(outpt.y.T)
+            rotor.time_hist.append(outpt.t)
+            pbar.update(1)
+    rotor.state_hist = np.concatenate(rotor.state_hist,0)
+    rotor.time_hist = np.concatenate(rotor.time_hist)
+            
 x0 = np.zeros(16)
 u0 = np.zeros(4)
 
 xr = np.random.random(16)
 ur = np.random.random(4)/10
 
-rotor = quadrotor(x0)
+xf = np.zeros(16)
+xf[:3] = np.random.random(3)
 
+ctrl = controller(rotor,xf)
 
+# ctrl.cnst(rotor.time_hist.shape[0],np.array([9.8,0,0,0]))
 
+# rotor = quadrotor(x0)
+rotor.state = x0
+simulate(ctrl.hist)
+
+for i in range(16):
+    plt.plot(rotor.time_hist,rotor.state_hist[:,i])
+    plt.show()
