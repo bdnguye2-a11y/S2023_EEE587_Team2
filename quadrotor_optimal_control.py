@@ -14,7 +14,7 @@ from sympy.physics.mechanics import dynamicsymbols
 from tqdm import *
 import pickle
 import time
-# import control as ctl
+import control as ctl
 
 # sp.init_printing(use_unicode=True)
 sp.init_printing(pretty_print=False)
@@ -174,7 +174,7 @@ class model():
         self.F2 = N+Z*self.U
 
         self.Xdot = sp.Matrix([self.F1,self.F2])
-        self.costate = list(sp.symbols('p1:17'))
+        self.costate = sp.Matrix([list(sp.symbols('p1:17'))]).T
         
     def define_params(self,input_params,input_vals):
         
@@ -212,6 +212,8 @@ class controller():
         
         self.H_symbolic = rtr.model.X.T*self.Q*rtr.model.X + rtr.model.u.T*self.R*rtr.model.u+rtr.model.costate.T*rtr.model.Xdot_params
         self.H_func = sp.lambdify((*rtr.model.X,*rtr.model.u),self.H_symbolic)
+        
+        rtr.model.pdot = sp.diff(self.H_symbolic,rtr.model.X).reshape((16,1))
     
     def init_h(self,rtr,inxf):
         inxf = inxf.reshape((16,1))
@@ -233,7 +235,6 @@ class controller():
         for i in range(4):
             self.hist[:,i] = u0[i]
             
-        
 
 def evolve(intime,inx,u1,u2,u3,u4):
     return rotor.a(*inx,u1,u2,u3,u4).squeeze()
@@ -268,11 +269,10 @@ ur = np.random.random(4)/10
 xf = np.zeros(16)
 xf[:3] = np.random.random(3)
 
-ctrl = controller(rotor,xf)
-
 # ctrl.cnst(rotor.time_hist.shape[0],np.array([9.8,0,0,0]))
 
-# rotor = quadrotor(x0)
+rotor = quadrotor(x0)
+ctrl = controller(rotor,xf)
 rotor.state = x0
 simulate(ctrl.hist)
 
