@@ -213,6 +213,20 @@ F2 = N+Z*U
 
 Xdot = sp.Matrix([F1,F2])
 
+def simulate()
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ##########################
 ####PMP
@@ -243,9 +257,9 @@ Rs = temp
 
 H = (0.5*X1.T*W1s*X1+0.5*X2.T*W2s*X2+0.5*u.T*Rs*u+costate.T*Xdot)[0]
 
-xf = sp.Matrix([[1],
-                [1],
-                [1],
+xf = sp.Matrix([[np.random.random()],
+                [np.random.random()],
+                [np.random.random()],
                 [0],
                 [0],
                 [0],
@@ -365,7 +379,7 @@ us = []
 for i in range(N):
     us.append(np.random.random(4)/100)
 
-otpt = odeint(deriv,x0,tint,args=(u0,0))
+otpt = odeint(deriv,x0.squeeze(),tint,args=(u0,0))
 
 for i in range(16):
     plt.plot(tint,otpt[:,i])
@@ -375,8 +389,53 @@ H_func = sp.lambdify((*X,*u),H)
 
 pdot = []
 
-for i in costate:
-    pdot.append(sp.diff(H,i))
+for i in X:
+    pdot.append(-sp.diff(H,i))
+
+
+pdot_funcs = []
+
+for i in trange(16):
+    pdot_funcs.append(sp.lambdify((*X,*u),pdot[i]))
+
+
+rst = [*X]
+rst.reverse()
+
+sbls = list(sp.symbols('x1:17'))
+
+dhcopy = dhdt.copy()
+
+# for i in trange(16):
+#     dhcopy = dhcopy.subs(X[15-i],sbls[15-i])
+    
+for i in trange(16):
+    dhcopy = dhcopy.subs(sp.diff(X[15-i],t),X_dot[15-i])
+
+h_func = sp.lambdify((*X,*u),dhcopy)
+
+X_dot_opt = []
+
+for i in range(16):
+    X_dot_opt.append(sp.diff(H,costate[i]))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 with tqdm(total = 396) as pbar:
     for i in range(16):
