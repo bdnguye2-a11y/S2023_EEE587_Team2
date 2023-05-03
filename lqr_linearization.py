@@ -326,15 +326,13 @@ for i in range(num):
     Ads.append(Ad)
     Bds.append(Bd)
 
-ust = u0
-usts = []
-
 for i in trange(num):
     F_calc = -np.linalg.inv(R+Bds[num-i-1].T@P[-1]@Bds[num-1-i])@Bds[num-1-i].T@P[-1]@Ads[num-1-i]
     F.append(F_calc)
     P_calc = (Ads[num-1-i]+Bds[num-1-i]@F[-1]).T@P[-1]@(Ads[num-1-i]+Bds[num-1-i]@F[-1])+F[-1].T@R@F[-1]+Q
     P.append(P_calc)
 
+ust = u0
 xst = x0
 xsts = [xst]
 
@@ -344,8 +342,11 @@ for i in range(num):
     ust = F[-i-1]@xst
     xst = Ad@xst+Bd@ust
     xsts.append(xst)
+    usts.append(ust.squeeze())
     
 xsts = np.array(xsts).squeeze()
+usts = np.array(usts).squeeze()
+
 
 xs = xsts[:,0]
 ys = xsts[:,1]
@@ -357,7 +358,7 @@ usts = np.zeros((150,4))
 for i in range(150):
     usts[i,:] = F[-i-1]@xsts[i,:]
 
-Q = np.diag([1,1,1, 0,0,0, 10,0, 0,0,0, 0,0,0, 0,0])
+Q = np.diag([10,10,10, 0,0,0, 1,0, 0,0,0, 0,0,0, 0,0])
 R = np.diag([.1,.1,.1,.1])
 
 P = [H]
@@ -378,53 +379,197 @@ xs2 = [x0[0,0]]
 ys2 = [x0[1,0]]
 zs2 = [x0[2,0]]
 als2 = [0]
+usts2 = [ust]
+
 for i in range(len(F)):
-    xst = Ad@xst+Bd@F[-i]@xst
+    ust = F[-i]@xst
+    xst = Ad@xst+Bd@ust
     xs2.append(xst[0,0])
     ys2.append(xst[1,0])
     zs2.append(xst[2,0])
-
     als2.append(xst[6,0])
+    usts2.append(ust)
 
-plt.figure(0)
+xsts2 = np.array(xsts).squeeze()
+usts2 = np.array(usts).squeeze()
+
+for i in range(150):
+    usts2[i,:] = F[-i-1]@xsts[i,:]
+
+Q = np.diag([1,1,1, 0,0,0, 10,0, 0,0,0, 0,0,0, 0,0])
+R = np.diag([.1,.1,.1,.1])
+
+P = [H]
+F = []
+
+xst = x0
+ust = u0
+
+for i in trange(num):
+    F_calc = -np.linalg.inv(R+Bd.T@P[-1]@Bd)@Bd.T@P[-1]@Ad
+    
+    F.append(F_calc)
+    P_calc = (Ad+Bd@F[-1]).T@P[-1]@(Ad+Bd@F[-1])+F[-1].T@R@F[-1]+Q
+    P.append(P_calc)
+
+usts3 = [ust]
+xst = x0
+xs3 = [x0[0,0]]
+ys3 = [x0[1,0]]
+zs3 = [x0[2,0]]
+als3 = [0]
+for i in range(len(F)):
+    
+    xst = Ad@xst+Bd@F[-i]@xst
+    xs3.append(xst[0,0])
+    ys3.append(xst[1,0])
+    zs3.append(xst[2,0])
+    als3.append(xst[6,0])
+
+xsts3 = np.array(xsts).squeeze()
+usts3 = np.array(usts).squeeze()
+
+fig = []
+
+fig.append(plt.figure(0))
 plt.plot(tinv,xs)
 plt.plot(tinv,xs2)
+plt.legend(['Q=0','Q=10'])
+plt.xlabel('Time (s)')
+plt.ylabel('X Position (m)')
+plt.grid()
+plt.show()
+
+with open('X_Position1.png','wb') as fil:
+    fig[-1].savefig(fil)
+
+fig.append(plt.figure(1))
+plt.plot(tinv,ys)
+plt.plot(tinv,ys2)
+plt.legend(['Q=0','Q=10'])
+plt.xlabel('Time (s)')
+plt.ylabel('Y Position (m)')
+plt.grid()
+plt.show()
+
+with open('Y_Position1.png','wb') as fil:
+    fig[-1].savefig(fil)
+
+fig.append(plt.figure(2))
+
+plt.plot(tinv,zs)
+plt.plot(tinv,zs2)
+plt.legend(['Q=0','Q=10'])
+plt.xlabel('Time (s)')
+plt.ylabel('Z Position (m)')
+plt.grid()
+plt.show()
+
+with open('Z_Position1.png','wb') as fil:
+    fig[-1].savefig(fil)
+
+fig.append(plt.figure(3))
+plt.plot(tinv,als)
+plt.plot(tinv,als2)
+plt.legend(['Q=0','Q=1'])
+plt.xlabel('Time (s)')
+plt.ylabel(r'Swing Angle $\alpha$ (deg)')
+plt.grid()
+plt.show()
+
+with open('Swing_Angle1.png','wb') as fil:
+    fig[-1].savefig(fil)
+
+fig.append(plt.figure(4))
+plt.plot(tinv,xs2)
+plt.plot(tinv,xs3)
 plt.legend(['Q=10','Q=1'])
 plt.xlabel('Time (s)')
 plt.ylabel('X Position (m)')
 plt.grid()
+plt.show()
 
-plt.figure(1)
-plt.plot(tinv,ys)
+with open('X_Position2.png','wb') as fil:
+    fig[-1].savefig(fil)
+
+fig.append(plt.figure(5))
 plt.plot(tinv,ys2)
+plt.plot(tinv,ys3)
 plt.legend(['Q=10','Q=1'])
 plt.xlabel('Time (s)')
 plt.ylabel('Y Position (m)')
 plt.grid()
+plt.show()
 
-plt.figure(2)
+with open('Y_Position2.png','wb') as fil:
+    fig[-1].savefig(fil)
 
-plt.plot(tinv,zs)
+fig.append(plt.figure(6))
+
 plt.plot(tinv,zs2)
+plt.plot(tinv,zs3)
 plt.legend(['Q=10','Q=1'])
 plt.xlabel('Time (s)')
 plt.ylabel('Z Position (m)')
 plt.grid()
+plt.show()
 
-plt.figure(3)
-plt.plot(tinv,als)
+with open('Z_Position2.png','wb') as fil:
+    fig[-1].savefig(fil)
+
+fig.append(plt.figure(7))
 plt.plot(tinv,als2)
+plt.plot(tinv,als3)
 plt.legend(['Q=1','Q=10'])
 plt.xlabel('Time (s)')
 plt.ylabel(r'Swing Angle $\alpha$ (deg)')
 plt.grid()
+plt.show()
 
-plt.figure(4)
-plt.plot(tinv[:150],usts[:,0])
-plt.plot(tinv[:150],usts[:,1])
-plt.plot(tinv[:150],usts[:,2])
-plt.plot(tinv[:150],usts[:,3])
-# plt.legend(['Q=1','Q=10'])
+with open('Swing_Angle2.png','wb') as fil:
+    fig[-1].savefig(fil)
+
+fig.append(plt.figure(8))
+plt.plot(tinv[:150],usts[:150,0])
+plt.plot(tinv[:150],usts[:150,1])
+plt.plot(tinv[:150],usts[:150,2])
+plt.plot(tinv[:150],usts[:150,3])
+plt.legend(['Thrust','Roll','Pitch','Yaw'])
+plt.title('Q Matrix = All Zeros')
 plt.xlabel('Time (s)')
 plt.ylabel(r'Input')
 plt.grid()
+plt.show()
+
+with open('Inuput Control Signals1.png','wb') as fil:
+    fig[-1].savefig(fil)
+
+fig.append(plt.figure(9))
+plt.plot(tinv[:150],usts2[:150,0])
+plt.plot(tinv[:150],usts2[:150,1])
+plt.plot(tinv[:150],usts2[:150,2])
+plt.plot(tinv[:150],usts2[:150,3])
+plt.legend(['Thrust','Roll','Pitch','Yaw'])
+plt.title('Q Matrix = [10,10,10] XYZ Positon, [1] Swing Angle')
+plt.xlabel('Time (s)')
+plt.ylabel(r'Input')
+plt.grid()
+plt.show()
+
+with open('Inuput Control Signals2.png','wb') as fil:
+    fig[-1].savefig(fil)
+
+fig.append(plt.figure(10))
+plt.plot(tinv[:150],usts3[:150,0])
+plt.plot(tinv[:150],usts3[:150,1])
+plt.plot(tinv[:150],usts3[:150,2])
+plt.plot(tinv[:150],usts3[:150,3])
+plt.legend(['Thrust','Roll','Pitch','Yaw'])
+plt.title('Q Matrix = [1,1,1] XYZ Positon, [10] Swing Angle')
+plt.xlabel('Time (s)')
+plt.ylabel(r'Input')
+plt.grid()
+plt.show()
+
+with open('Inuput Control Signals3.png','wb') as fil:
+    fig[-1].savefig(fil)
