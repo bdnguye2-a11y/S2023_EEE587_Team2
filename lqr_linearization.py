@@ -326,6 +326,7 @@ for i in range(num):
     Ads.append(Ad)
     Bds.append(Bd)
 
+ust = u0
 usts = []
 
 for i in trange(num):
@@ -343,29 +344,7 @@ for i in range(num):
     ust = F[-i-1]@xst
     xst = Ad@xst+Bd@ust
     xsts.append(xst)
-
-
-
-# for i in trange(1,num):
-#     xst = xsts[num-i]
-#     ust = F[i-1]@xst
-#     Ad,Bd = discretize(xst,ust)
-#     for j in range(num-i+1):
-#         Ads[j] = Ad
-#         Bds[j] = Bd
     
-#     for j in range(i,num):
-#         F_calc = -np.linalg.inv(R+Bds[j].T@P[j]@Bds[num-1-j])@Bds[num-1-j].T@P[-1]@Ads[num-1-j]
-#         F.append(F_calc)
-#         P_calc = (Ads[num-1-i]+Bds[num-1-i]@F[-1]).T@P[-1]@(Ads[num-1-i]+Bds[num-1-i]@F[-1])+F[-1].T@R@F[-1]+Q
-#         P[]
-
-#     xst = x0
-#     for j in range(num-i):
-#         xst = Ads[j]@xst+Bds[j]@F[-j-1]@xst
-#         xsts[j] = xst
-    
-
 xsts = np.array(xsts).squeeze()
 
 xs = xsts[:,0]
@@ -377,106 +356,6 @@ usts = np.zeros((150,4))
 
 for i in range(150):
     usts[i,:] = F[-i-1]@xsts[i,:]
-    
-
-# plt.plot(xsts[:,0])
-# plt.figure()
-# plt.plot(xsts[:,1])
-# plt.figure()
-# plt.plot(xsts[:,2])
-# plt.figure()
-# plt.plot(xsts[:,3])
-# plt.figure()
-# plt.plot(xsts[:,4])
-# plt.figure()
-# plt.plot(xsts[:,5])
-# plt.figure()
-# plt.plot(xsts[:,6])
-# plt.figure()
-# plt.plot(xsts[:,7])
-# plt.figure()
-
-# plt.plot(xsts[:,8])
-# plt.figure()
-# plt.plot(xsts[:,9])
-# plt.figure()
-# plt.plot(xsts[:,10])
-# plt.figure()
-# plt.plot(xsts[:,11])
-# plt.figure()
-# plt.plot(xsts[:,12])
-# plt.figure()
-# plt.plot(xsts[:,13])
-# plt.figure()
-# plt.plot(xsts[:,14])
-# plt.figure()
-# plt.plot(xsts[:,15])
-# plt.figure()
-
-
-
-# F2 = []
-
-# for j in trange(2,num):
-    
-#     xst = xsts[-j]
-#     ust = F[-j+1]@xst
-#     Ad,Bd = discretize(xst,ust)
-    
-    
-    
-#     for i in trange(j,num):
-#         F_calc = -np.linalg.inv(R+Bd.T@P2[-1]@Bd)@Bd.T@P2[-1]@Ad
-        
-#         F2.append(F_calc)
-#         P_calc = (Ad+Bd@F[-1]).T@P2[-1]@(Ad+Bd@F2[-1])+F2[-1].T@R@F2[-1]+Q
-#         P2.append(P_calc)
-    
-#     for i in trange(1,len(F)):
-#         ust = F[-i]@xst
-#         Ad,Bd = discretize(xst,ust)
-#         Ads.append(Ad)
-#         Bds.append(Bd)
-#         xst = Ad@xst+Bd@ust
-#         xsts2.append(xst)
-
-# xsts2 = np.array(xsts2).squeeze()
-
-# fig = plt.figure()
-# ax = fig.add_subplot(projection='3d')
-# ax.plot(xsts2[:,0],xsts2[:,1],xsts2[:,2])
-# ax.plot(xsts[:,0],xsts[:,1],xsts[:,2])
-
-# plt.figure(1)
-# plt.plot(tinv,als)
-
-# ###
-# xst = x0
-# xs2 = [x0[0,0]]
-# ys2 = [x0[1,0]]
-# zs2 = [x0[2,0]]
-# als2 = [0]
-# for i in range(len(F)):
-#     xst = Ad@xst+Bd@F[-i]@xst+np.random.normal(0,.01,(16,1))
-#     xs2.append(xst[0,0])
-#     ys2.append(xst[1,0])
-#     zs2.append(xst[2,0])
-
-#     als2.append(xst[6,0])
-
-# # plt.figure(2)
-# plt.plot(tinv,xs2)
-# plt.plot(tinv,ys2)
-# plt.plot(tinv,zs2)
-# plt.legend([r'$\alpha$ no filter',r'$\alpha$ Kalman Filter'])
-# plt.xlabel('Time (s)')
-# plt.ylabel('Position (m)')
-# plt.grid()
-# plt.figure(1)
-# plt.plot(tinv,als2)
-# plt.legend(['Q6=10','Q6=1'])
-# plt.grid()
-# ###
 
 Q = np.diag([1,1,1, 0,0,0, 10,0, 0,0,0, 0,0,0, 0,0])
 R = np.diag([.1,.1,.1,.1])
@@ -486,6 +365,7 @@ F = []
 
 xst = x0
 ust = u0
+
 for i in trange(num):
     F_calc = -np.linalg.inv(R+Bd.T@P[-1]@Bd)@Bd.T@P[-1]@Ad
     

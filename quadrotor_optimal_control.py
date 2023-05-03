@@ -213,7 +213,7 @@ class controller():
         self.H_symbolic = rtr.model.X.T*self.Q*rtr.model.X + rtr.model.u.T*self.R*rtr.model.u+rtr.model.costate.T*rtr.model.Xdot_params
         self.H_func = sp.lambdify((*rtr.model.X,*rtr.model.u),self.H_symbolic)
         
-        rtr.model.pdot = sp.diff(self.H_symbolic,rtr.model.X).reshape((16,1))
+        rtr.model.pdot = sp.diff(self.H_symbolic,rtr.model.X).reshape(16,1)
     
     def init_h(self,rtr,inxf):
         inxf = inxf.reshape((16,1))
