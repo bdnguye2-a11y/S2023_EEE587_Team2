@@ -1,4 +1,4 @@
-# S2023_EEE587_Team2
+# Environmental Setup
 Before running the code, we need to make sure the environment is up to date.
 
 Install the necessary python version. The version we use is Python 3.7.13
